@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>สมัครสมาชิก</title>
+
+<style>
+    .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    }
+
+    /* column */
+    .col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    }
+
+    /* full width */
+    .full {
+    grid-column: span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    }
+
+    /* input */
+    input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    }
+
+    /* 📱 responsive (มือถือ) */
+    @media (max-width: 600px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .full {
+        grid-column: span 1;
+    }
+    }
+
+    /* 🔥 header */
+    .card-header {
+    text-align: center;
+    margin-bottom: 25px;
+    }
+
+    /* title */
+    .card-header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    }
+
+    /* subtitle */
+    .card-header p {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #888;
+    }
+
+    .card-header::after {
+    content: "";
+    display: block;
+    width: 50px;
+    height: 3px;
+    margin: 12px auto 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #6a6afc, #8b5cf6);
+    color: white;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+    .btn-danger {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    background:#fc6a6a;
+    color: white;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn:hover {
+    opacity: 0.9;
+  }
+  .btn-outline {
+    width: 100%;
+    padding: 14px;
+    border-radius: 6px;
+    border: 1px solid #8b5cf6;
+    background: transparent;
+    color: #8b5cf6;
+    font-weight: bold;
+    letter-spacing: 1px;
+    /*margin-top: 10px;*/
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .btn-outline:hover {
+    background: #8b5cf6;
+    color: #fff;
+  }
+</style>
+</head>
+
+<body>
+<div class="card">
+    <div class="card-header">
+        <h1>ร่วมทีมกับเรา</h1>
+        <p>เริ่มต้นเส้นทางนักวิ่งไปด้วยกัน 🏃‍♂️</p>
+        
+    </div>
+
+  <div class="form-grid">
+
+    <!-- ซ้าย -->
+    <div class="col">
+      <input type="text" id="name" placeholder="ชื่อ">
+      <input type="text" id="lastname" placeholder="นามสกุล">
+      <input type="text" id="nickname" placeholder="ชื่อเล่น">
+      <input type="date" id="birthdate">
+    </div>
+
+    <!-- ขวา -->
+    <div class="col">
+      <input type="number" id="weight" placeholder="น้ำหนัก (kg)">
+      <input type="number" id="height" placeholder="ส่วนสูง (cm)">
+      <input type="text" id="pb5k" placeholder="PB 5K (25:30)">
+      <input type="text" id="pb10k" placeholder="PB 10K (55:00)">
+    </div>
+
+    <!-- เต็มแถว -->
+    <div class="full">
+      <input type="text" id="pb21k" placeholder="PB 21K (2:05:00)">
+      <input type="text" id="pb42k" placeholder="PB 42K (4:30:00)">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <input type="password" id="confirmPassword" placeholder="ยืนยัน Password">
+    </div>
+
+    <div class="col">
+        <button class="btn" onclick="register()">สมัครสมาชิก</button>
+    </div>
+
+    <div class="col">
+        <button class="btn-outline" onclick="gologinpage()">กลับหน้าหลัก</button>
+    </div>
+  </div>
+<br>
+
+
+  
+  <div id="status"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// 🔥 config ของคุณ
+const firebaseConfig = {
+  apiKey: "AIzaSyDQ73R5g8CQyC76nKW9rPCCTwHm8ZRJaQw",
+  authDomain: "leo-running-camp.firebaseapp.com",
+  projectId: "leo-running-camp",
+  storageBucket: "leo-running-camp.firebasestorage.app",
+  messagingSenderId: "145488848267",
+  appId: "1:145488848267:web:e8daabea6061c818fb7b8e",
+  measurementId: "G-5FCB6D998V"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const status = document.getElementById("status");
+
+//Go login page
+window.gologinpage = async function(){
+    window.location.href = "login.html";
+}
+// สมัครสมาชิก
+window.register = async function() {
+
+    const name = document.getElementById("name").value.trim();
+    const lastname = document.getElementById("lastname").value.trim();
+    const nickname = document.getElementById("nickname").value.trim();
+    const birthdate = document.getElementById("birthdate").value;
+    const weight = document.getElementById("weight").value;
+    const height = document.getElementById("height").value;
+
+    const pb5k = document.getElementById("pb5k").value;
+    const pb10k = document.getElementById("pb10k").value;
+    const pb21k = document.getElementById("pb21k").value;
+    const pb42k = document.getElementById("pb42k").value;
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+
+  // ✅ validation
+  if (!name || !lastname || !nickname || !email || !password) {
+    status.innerText = "กรุณากรอกข้อมูลให้ครบ";
+    return;
+  }
+
+  if (password.length < 6) {
+    status.innerText = "รหัสผ่านต้องอย่างน้อย 6 ตัว";
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    status.innerText = "รหัสผ่านไม่ตรงกัน";
+    return;
+  }
+
+    if (!birthdate || !weight || !height) {
+        status.innerText = "กรุณากรอกข้อมูลร่างกายให้ครบ";
+        return;
+    }
+  try {
+    // 🔐 สร้าง user (ได้ UID)
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // 📦 สร้าง profile ใน Firestore
+    await setDoc(doc(db, "users", user.uid), {
+    athlete_name: name,
+    athlete_last_name: lastname,
+    athlete_nick_name: nickname,
+    email: user.email,
+    roles: ["athlete"],
+
+    birthdate: birthdate,
+    weight: Number(weight),
+    height: Number(height),
+
+    pb: {
+        "5k": pb5k || "-",
+        "10k": pb10k || "-",
+        "21k": pb21k || "-",
+        "42k": pb42k || "-"
+    },
+
+    created_at: new Date()
+    });
+
+    status.innerText = "สมัครสำเร็จ 🎉";
+
+    // 👉 redirect
+    setTimeout(() => {
+      window.location.replace("profile.html");
+    }, 1000);
+
+  } catch (err) {
+    status.innerText = err.message;
+  }
+}
+</script>
+
+</body>
+</html>

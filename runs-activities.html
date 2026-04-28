@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ส่งผลซ้อม</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f3f4f6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+  background: white;
+  padding: 28px 24px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* 🔥 group ฟอร์ม */
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #6b7280;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.15);
+}
+
+textarea {
+  resize: none;
+  height: 80px;
+}
+
+/* 🔥 แถว 2 ช่อง */
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.row .form-group {
+  flex: 1;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+#status {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 14px;
+}
+select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+#previewBox {
+  margin-top: 10px;
+  text-align: center;
+}
+
+#previewImg {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>🏃‍♂️ ส่งผลซ้อม</h2>
+
+  <div class="form-group">
+    <label>วันที่</label>
+    <input type="date" id="date">
+  </div>
+
+    <div class="form-group">
+        <label>ประเภทการซ้อม</label>
+        <select id="type">
+            <option value="easy">Easy</option>
+            <option value="interval">Interval</option>
+            <option value="tempo">Tempo</option>
+            <option value="longrun">Long Run</option>
+        </select>
+    </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>ระยะทาง (km)</label>
+      <input type="number" id="distance">
+    </div>
+
+    <div class="form-group">
+      <label>เวลา</label>
+      <input type="text" id="time" placeholder="25:30">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Pace (min/km)</label>
+    <input type="text" id="pace">
+  </div>
+
+    <div class="form-group">
+        <label>อัปโหลดรูป</label>
+        <input type="file" id="image">
+    </div>
+
+    <div id="previewBox" style="display:none;">
+        <img id="previewImg">
+    </div>
+  <div class="form-group">
+    <label>หมายเหตุ</label>
+    <textarea id="note"></textarea>
+  </div>
+
+  <button onclick="submitRun()">บันทึก</button>
+
+  <div id="status"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+  getFirestore,
+  addDoc,
+  collection,
+  query,
+  where,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+// 🔥 config ของคุณ
+const firebaseConfig = {
+  apiKey: "AIzaSyDQ73R5g8CQyC76nKW9rPCCTwHm8ZRJaQw",
+  authDomain: "leo-running-camp.firebaseapp.com",
+  projectId: "leo-running-camp",
+  storageBucket:"leo-running-camp.appspot.com",
+  //storageBucket: "leo-running-camp.firebasestorage.app",
+  messagingSenderId: "145488848267",
+  appId: "1:145488848267:web:e8daabea6061c818fb7b8e",
+  measurementId: "G-5FCB6D998V"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+//const type = document.getElementById("type").value;
+const storage = getStorage(app);
+const map = {
+  easy: "Easy 🟢",
+  interval: "Interval 🔴",
+  tempo: "Tempo 🟠",
+  longrun: "Long Run 🔵"
+};
+//const file = document.getElementById("image").files[0];
+const imageInput = document.getElementById  ("image");
+const previewBox = document.getElementById("previewBox");
+const previewImg = document.getElementById("previewImg");
+const status = document.getElementById("status");
+let currentUser = null;
+
+// 🔐 รอ auth โหลดก่อน
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  currentUser = user;
+  console.log(currentUser)
+  console.log(storage.app.options.storageBucket);
+});
+
+// ✅ submit
+window.submitRun = async function () {
+  if (!currentUser) return;
+
+  const date = document.getElementById("date").value;
+  const file = imageInput.files[0];
+
+  if (!date) {
+    status.innerText = "กรุณาเลือกวันที่";
+    return;
+  }
+
+  try {
+    // 🔥 เช็คซ้ำ user + date
+    const q = query(
+      collection(db, "runs"),
+      where("userId", "==", currentUser.uid),
+      where("date", "==", date)
+    );
+
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      status.innerText = "⚠️ วันนี้คุณส่งผลซ้อมไปแล้ว";
+      return;
+    }
+
+    let imageUrl = "";
+
+    if (file) {
+      const fileRef = ref(
+        storage,
+        `runs/${currentUser.uid}/${Date.now()}_${file.name}`
+      );
+
+      await uploadBytes(fileRef, file);
+      imageUrl = await getDownloadURL(fileRef);
+    }
+
+    await addDoc(collection(db, "runs"), {
+      userId: currentUser.uid,
+      date,
+      distance: Number(document.getElementById("distance").value),
+      time: document.getElementById("time").value,
+      pace: document.getElementById("pace").value,
+      type: document.getElementById("type").value,
+      note: document.getElementById("note").value || "",
+      imageUrl,
+      created_at: new Date()
+    });
+
+    status.innerText = "บันทึกสำเร็จ 🎉";
+
+  } catch (e) {
+    console.error(e);
+    status.innerText = e.message;
+  }
+};
+
+//preview img
+imageInput.addEventListener("change", () => {
+  const file = imageInput.files[0];
+
+  if (!file) {
+    previewBox.style.display = "none";
+    return;
+  }
+
+  // 🔥 สร้าง preview
+  const url = URL.createObjectURL(file);
+
+  previewImg.src = url;
+  previewBox.style.display = "block";
+});
+</script>
+
+</body>
+</html>

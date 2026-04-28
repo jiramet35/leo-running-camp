@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload รูปภาพ</title>
+</head>
+<body>
+
+  <h2>อัปโหลดรูปภาพ</h2>
+
+  <form id="uploadForm">
+    <input type="file" id="imageInput" accept="image/*">
+    <br><br>
+    <img id="preview" width="200" style="display:none;">
+    <br><br>
+    <button type="submit">อัปโหลด</button>
+  </form>
+
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+        /*import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth,signOut,signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {getStorage, getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";*/
+  // 2. 🔥 ใส่ config ตรงนี้
+const firebaseConfig = {
+           apiKey: "AIzaSyDPyfVn4tA0g8ObbsJUlN922wQBu4QH4Z4",
+            authDomain: -"reg7wsp.firebaseapp.com",
+            projectId: "reg7-wsp",
+            storageBucket: "reg7-wsp.firebasestorage.app",
+            messagingSenderId: "1066749156612",
+            appId: "1:1066749156612:web:9a4f17b949d4d27f46c451",
+            measurementId: "G-X4RZTECK26"
+};
+
+  // 3. initialize app
+  const app = initializeApp(firebaseConfig);
+
+  // 4. เรียกใช้ service หลังจาก init แล้ว
+  const storage = getStorage(app);
+
+  // 5. เขียน upload
+  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const file = document.getElementById("imageInput").files[0];
+    if (!file) return alert("เลือกไฟล์ก่อน");
+
+    const fileRef = ref(storage, 'images/' + Date.now() + '_' + file.name);
+
+    try {
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      console.log(url);
+      alert("อัปโหลดสำเร็จ");
+    } catch (err) {
+      console.error(err);
+      alert("อัปโหลดไม่สำเร็จ");
+    }
+  });
+  </script>
+
+</body>
+</html>

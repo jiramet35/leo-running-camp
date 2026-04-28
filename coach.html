@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Coach Dashboard</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f5f6f8;
+  padding: 20px;
+}
+
+h2 {
+  margin-bottom: 15px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  text-align: center;
+}
+
+th {
+  background: #7c3aed;
+  color: white;
+}
+
+tr:nth-child(even) {
+  background: #f9fafb;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🏃‍♂️ Coach Dashboard</h2>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>ชื่อ</th>
+        <th>นน.</th>
+        <th>สูง</th>
+        <th>PB 5K</th>
+        <th>PB 10K</th>
+        <th>PB 21K</th>
+        <th>PB 42K</th>
+        <th>สิทธิ์</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, arrayUnion ,arrayRemove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDQ73R5g8CQyC76nKW9rPCCTwHm8ZRJaQw",
+  authDomain: "leo-running-camp.firebaseapp.com",
+  projectId: "leo-running-camp",
+  storageBucket: "leo-running-camp.firebasestorage.app",
+  messagingSenderId: "145488848267",
+  appId: "1:145488848267:web:e8daabea6061c818fb7b8e",
+  measurementId: "G-5FCB6D998V"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const tableBody = document.getElementById("tableBody");
+
+// ⏱️ แปลงเวลา
+function timeToSec(t) {
+  if (!t || t === "-") return 999999;
+  const p = t.split(":").map(Number);
+  return p.length === 2 ? p[0]*60+p[1] :
+         p.length === 3 ? p[0]*3600+p[1]*60+p[2] :
+         999999;
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  try {
+    // 🔥 ดึง role ของตัวเองก่อน
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+
+    if (!userDoc.exists()) {
+      alert("ไม่พบข้อมูล user");
+      return;
+    }
+
+    const userData = userDoc.data();
+    const roles = userData.roles || [];
+
+    console.log("roles:", roles);
+
+    // ❌ ไม่ใช่ coach → ห้ามเข้า
+    if (!roles.includes("coach") && !roles.includes("staff")) {
+      alert("คุณไม่มีสิทธิ์เข้าหน้านี้");
+      window.location.href = "profile.html";
+      return;
+    }
+
+    // ✅ โหลด users ทั้งหมด
+    const snapshot = await getDocs(collection(db, "users"));
+
+    console.log("จำนวน user:", snapshot.size);
+
+    let users = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+
+      users.push({
+        uid: doc.id,
+        name: (data.athlete_name || "") + " " + (data.athlete_last_name || ""),
+        weight: data.weight || "-",
+        height: data.height || "-",
+        pb5k: data.pb?.["5k"],
+        pb10k: data.pb?.["10k"],
+        pb21k: data.pb?.["21k"],
+        pb42k: data.pb?.["42k"],
+        roles: data.roles || [] 
+      });
+    });
+
+    // 🔥 ranking
+    users.sort((a,b) => timeToSec(a.pb5k) - timeToSec(b.pb5k));
+
+    // render
+    tableBody.innerHTML = ""; // กันซ้ำ
+
+    users.forEach((u, i) => {
+      tableBody.innerHTML += `
+        <tr>
+          <td>${i+1}</td>
+          <td>${u.name}</td>
+          <td>${u.weight}</td>
+          <td>${u.height}</td>
+          <td>${u.pb5k || "-"}</td>
+          <td>${u.pb10k || "-"}</td>
+          <td>${u.pb21k || "-"}</td>
+          <td>${u.pb42k || "-"}</td>
+            <td>
+            <button onclick='toggleRole("${u.uid}", "coach", ${JSON.stringify(u.roles || [])})'>
+                ${(u.roles || []).includes("coach") ? "✅ Coach" : "❌ Coach"}
+            </button>
+
+            <button onclick='toggleRole("${u.uid}", "staff", ${JSON.stringify(u.roles || [])})'>
+                ${(u.roles || []).includes("staff") ? "✅ Staff" : "❌ Staff"}
+            </button>
+            </td>
+        </tr>
+      `;
+    });
+
+  } catch (e) {
+    console.error("โหลดข้อมูลพัง:", e);
+    alert(e.message);
+  }
+});
+
+//Grant Roles
+window.grantRole = async function(uid, role) {
+  try {
+    const userRef = doc(db, "users", uid);
+
+    await updateDoc(userRef, {
+      roles: arrayUnion(role)
+    });
+
+    alert("เพิ่มสิทธิ์สำเร็จ");
+    location.reload();
+
+  } catch (e) {
+    console.error(e);
+    alert("ผิดพลาด: " + e.message);
+  }
+}  
+
+//Toggle Roles
+window.toggleRole = async function(uid, role, currentRoles) {
+  try {
+    const userRef = doc(db, "users", uid);
+
+    // ❗ กันลบ role ตัวเอง (กันหลุดจาก coach)
+    if (uid === auth.currentUser.uid && role === "coach") {
+      alert("ห้ามลบสิทธิ์ coach ของตัวเอง");
+      return;
+    }
+
+    if (currentRoles.includes(role)) {
+      // 🔴 ลบ role
+      await updateDoc(userRef, {
+        roles: arrayRemove(role)
+      });
+      alert("ลบ " + role + " แล้ว");
+    } else {
+      // 🟢 เพิ่ม role
+      await updateDoc(userRef, {
+        roles: arrayUnion(role)
+      });
+      alert("เพิ่ม " + role + " แล้ว");
+    }
+
+    location.reload(); // (เดี๋ยวค่อยอัปเกรดให้ไม่ reload)
+
+  } catch (e) {
+    console.error(e);
+    alert("ผิดพลาด: " + e.message);
+  }
+}
+</script>
+
+</body>
+</html>
