@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ส่งผลซ้อม</title>
 
 <style>
@@ -13,58 +14,51 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  padding: 20px; /* 🔥 กันชนขอบจอ */
 }
 
 .card {
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   background: white;
-  padding: 28px 24px;
+  padding: 28px 24px; /* 🔥 เพิ่ม padding */
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
 h2 {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
-/* 🔥 group ฟอร์ม */
 .form-group {
   margin-bottom: 16px;
 }
 
 label {
-  display: block;
   font-size: 13px;
-  margin-bottom: 6px;
   color: #6b7280;
+  display: block;
+  margin-bottom: 6px;
 }
 
-input, textarea {
+input, textarea, select {
   width: 100%;
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
   font-size: 14px;
-  box-sizing: border-box;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 2px rgba(124,58,237,0.15);
+  box-sizing: border-box; /* 🔥 แก้ล้นขวา */
 }
 
 textarea {
-  resize: none;
   height: 80px;
+  resize: none;
 }
 
-/* 🔥 แถว 2 ช่อง */
 .row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
 .row .form-group {
@@ -75,42 +69,74 @@ button {
   width: 100%;
   padding: 14px;
   margin-top: 10px;
-  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  background: linear-gradient(135deg,#7c3aed,#9333ea);
   color: white;
   border: none;
   border-radius: 12px;
   font-weight: bold;
   cursor: pointer;
-  transition: 0.2s;
 }
 
 button:hover {
   opacity: 0.9;
 }
 
-#status {
+/* effort */
+.effort-box {
   text-align: center;
-  margin-top: 14px;
-  font-size: 14px;
-}
-select {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  font-size: 14px;
-}
-#previewBox {
-  margin-top: 10px;
-  text-align: center;
+  margin-top: 6px;
 }
 
-#previewImg {
+.effort-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #7c3aed;
+  margin-bottom: 6px;
+}
+
+input[type=range] {
   width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
+}
+
+.levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.level-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+}
+
+.level-btn.active {
+  background: #7c3aed;
+  color: white;
+}
+
+#status {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;   /* 🔥 จัดให้อยู่กึ่งกลางแนวตั้ง */
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkbox-group input {
+  width: 16px;
+  height: 16px;
 }
 </style>
 </head>
@@ -118,84 +144,91 @@ select {
 <body>
 
 <div class="card">
-  <h2>🏃‍♂️ ส่งผลซ้อม</h2>
+<h2>🏃‍♂️ ส่งผลซ้อม</h2>
 
-  <div class="form-group">
-    <label>วันที่</label>
-    <input type="date" id="date">
-  </div>
+<div class="form-group">
+<label>วันที่</label>
+<input type="date" id="date">
+</div>
 
-    <div class="form-group">
-        <label>ประเภทการซ้อม</label>
-        <select id="type">
-            <option value="easy">Easy</option>
-            <option value="interval">Interval</option>
-            <option value="tempo">Tempo</option>
-            <option value="longrun">Long Run</option>
-        </select>
-    </div>
+<div class="form-group">
+<label>ประเภทการซ้อม</label>
+<select id="type">
+<option value="easy">Easy</option>
+<option value="interval">Interval</option>
+<option value="tempo">Tempo</option>
+<option value="longrun">Long Run</option>
+</select>
+</div>
 
-  <div class="row">
-    <div class="form-group">
-      <label>ระยะทาง (km)</label>
-      <input type="number" id="distance">
-    </div>
+<div class="form-group checkbox-group">
+  <label>
+    <input type="checkbox" id="completed">
+    <b style="color: red;">คุณวิ่งจบตามโปรแกรม</b>
+  </label>
+</div>
 
-    <div class="form-group">
-      <label>เวลา</label>
-      <input type="text" id="time" placeholder="25:30">
-    </div>
-  </div>
+<div class="row">
+<div class="form-group">
+<label>ระยะ (km)</label>
+<input id="distance" placeholder="10.50">
+</div>
 
-  <div class="form-group">
-    <label>Pace (min/km)</label>
-    <input type="text" id="pace">
-  </div>
+<div class="form-group">
+<label>เวลา</label>
+<input id="time" placeholder="00:45:30">
+</div>
+</div>
 
-    <div class="form-group">
-        <label>อัปโหลดรูป</label>
-        <input type="file" id="image">
-    </div>
+<div class="form-group effort-box">
+<label>ระดับความเหนื่อย</label>
+<div class="effort-value" id="effortValue">5</div>
+<input type="range" id="slider" min="1" max="10" value="5">
+<!-- <div class="levels" id="levels"></div> -->
+</div>
 
-    <div id="previewBox" style="display:none;">
-        <img id="previewImg">
-    </div>
-  <div class="form-group">
-    <label>หมายเหตุ</label>
-    <textarea id="note"></textarea>
-  </div>
+<div class="form-group">
+<label>Garmin / Strava</label>
+<input id="link">
+</div>
 
-  <button onclick="submitRun()">บันทึก</button>
+<div class="form-group">
+<label>หมายเหตุ</label>
+<textarea id="note"></textarea>
+</div>
 
-  <div id="status"></div>
+<button onclick="submitRun()">บันทึก</button>
+<div id="status"></div>
+
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore,addDoc,collection ,getDoc , doc, setDoc} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+document.addEventListener("DOMContentLoaded", () => {
 
-import {
-  getFirestore,
-  addDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  const params = new URLSearchParams(window.location.search);
+  const dateParam = params.get("date");
 
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-// 🔥 config ของคุณ
+  console.log("dateParam:", dateParam);
+
+  if (dateParam) {
+    const dateInput = document.getElementById("date");
+
+    if (dateInput) {
+      dateInput.value = dateParam;
+    } else {
+      console.error("ไม่เจอ input#date");
+    }
+  }
+
+});
 const firebaseConfig = {
   apiKey: "AIzaSyDQ73R5g8CQyC76nKW9rPCCTwHm8ZRJaQw",
   authDomain: "leo-running-camp.firebaseapp.com",
   projectId: "leo-running-camp",
-  storageBucket:"leo-running-camp.appspot.com",
-  //storageBucket: "leo-running-camp.firebasestorage.app",
+  storageBucket: "leo-running-camp.firebasestorage.app",
   messagingSenderId: "145488848267",
   appId: "1:145488848267:web:e8daabea6061c818fb7b8e",
   measurementId: "G-5FCB6D998V"
@@ -204,107 +237,102 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-//const type = document.getElementById("type").value;
-const storage = getStorage(app);
-const map = {
-  easy: "Easy 🟢",
-  interval: "Interval 🔴",
-  tempo: "Tempo 🟠",
-  longrun: "Long Run 🔵"
-};
-//const file = document.getElementById("image").files[0];
-const imageInput = document.getElementById  ("image");
-const previewBox = document.getElementById("previewBox");
-const previewImg = document.getElementById("previewImg");
-const status = document.getElementById("status");
-let currentUser = null;
 
-// 🔐 รอ auth โหลดก่อน
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
+let currentUser=null;
 
-  currentUser = user;
-  console.log(currentUser)
-  console.log(storage.app.options.storageBucket);
+onAuthStateChanged(auth,u=>{
+  if(!u) location.href="login.html";
+  currentUser=u;
 });
 
-// ✅ submit
-window.submitRun = async function () {
+// effort
+let effort=5;
+const val=document.getElementById("effortValue");
+const slider=document.getElementById("slider");
+const levels=document.getElementById("levels");
+
+for(let i=1;i<=10;i++){
+  const b=document.createElement("button");
+  b.innerText=i;
+  b.className="level-btn";
+  b.onclick=()=>setEffort(i);
+  levels.appendChild(b);
+}
+
+function setEffort(v){
+  effort=v;
+  val.innerText=v;
+  slider.value=v;
+  document.querySelectorAll(".level-btn").forEach((b,i)=>{
+    b.classList.toggle("active",i+1===v);
+  });
+}
+
+slider.oninput=e=>setEffort(Number(e.target.value));
+setEffort(5);
+
+// submit
+window.submitRun = async () => {
   if (!currentUser) return;
 
-  const date = document.getElementById("date").value;
-  const file = imageInput.files[0];
+  const status = document.getElementById("status");
 
+  const date = document.getElementById("date").value;
+  const dist = document.getElementById("distance").value;
+  const time = document.getElementById("time").value;
+
+  // ✅ validate
   if (!date) {
     status.innerText = "กรุณาเลือกวันที่";
     return;
   }
 
+  if (!/^\d+(\.\d{1,2})?$/.test(dist)) {
+    //status.innerText = "ระยะไม่ถูกต้อง";
+    alert("⚠️ ระบุระยะไม่ถูกต้อง");
+    return;
+  }
+
+  if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(time)) {
+    //status.innerText = "เวลาไม่ถูกต้อง";
+    alert("⚠️ ระบุเวลาไม่ถูกต้อง");
+    return;
+  }
+
   try {
-    // 🔥 เช็คซ้ำ user + date
-    const q = query(
-      collection(db, "runs"),
-      where("userId", "==", currentUser.uid),
-      where("date", "==", date)
-    );
+    // 🔥 สร้าง id กันซ้ำ
+    const docId = currentUser.uid + "_" + date;
 
-    const snap = await getDocs(q);
+    const ref = doc(db, "runs", docId);
+    const existing = await getDoc(ref);
 
-    if (!snap.empty) {
-      status.innerText = "⚠️ วันนี้คุณส่งผลซ้อมไปแล้ว";
+    if (existing.exists()) {
+      //status.innerText = "⚠️ วันนี้คุณส่งแล้ว";
+      alert("⚠️ วันนี้ ("+date+") คุณส่งผลวิ่งแล้ว");
       return;
     }
 
-    let imageUrl = "";
-
-    if (file) {
-      const fileRef = ref(
-        storage,
-        `runs/${currentUser.uid}/${Date.now()}_${file.name}`
-      );
-
-      await uploadBytes(fileRef, file);
-      imageUrl = await getDownloadURL(fileRef);
-    }
-
-    await addDoc(collection(db, "runs"), {
+    // ✅ ใช้ setDoc แทน addDoc
+    await setDoc(ref, {
       userId: currentUser.uid,
       date,
-      distance: Number(document.getElementById("distance").value),
-      time: document.getElementById("time").value,
-      pace: document.getElementById("pace").value,
       type: document.getElementById("type").value,
-      note: document.getElementById("note").value || "",
-      imageUrl,
+      completed: document.getElementById("completed").checked,
+      distance: Number(dist),
+      time,
+      effort,
+      link: document.getElementById("link").value,
+      note: document.getElementById("note").value,
       created_at: new Date()
     });
 
-    status.innerText = "บันทึกสำเร็จ 🎉";
-
+    //status.innerText = "สำเร็จ 🎉";
+    alert("สำเร็จ 🎉");
   } catch (e) {
     console.error(e);
     status.innerText = e.message;
   }
 };
-
-//preview img
-imageInput.addEventListener("change", () => {
-  const file = imageInput.files[0];
-
-  if (!file) {
-    previewBox.style.display = "none";
-    return;
-  }
-
-  // 🔥 สร้าง preview
-  const url = URL.createObjectURL(file);
-
-  previewImg.src = url;
-  previewBox.style.display = "block";
-});
 </script>
 
 </body>

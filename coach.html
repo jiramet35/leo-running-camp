@@ -172,6 +172,10 @@ onAuthStateChanged(auth, async (user) => {
             <button onclick='toggleRole("${u.uid}", "staff", ${JSON.stringify(u.roles || [])})'>
                 ${(u.roles || []).includes("staff") ? "✅ Staff" : "❌ Staff"}
             </button>
+
+            <button onclick='toggleRole("${u.uid}", "athlete", ${JSON.stringify(u.roles || [])})'>
+                ${(u.roles || []).includes("athlete") ? "✅ athlete" : "❌ athlete"}
+            </button>
             </td>
         </tr>
       `;
