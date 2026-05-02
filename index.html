@@ -140,9 +140,10 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 const auth = getAuth(app);
 const status = document.getElementById("status");
-
+let checked = false;
 // login
 window.login = async function() {
   try {
@@ -211,11 +212,16 @@ window.resetPassword = function() {
 
 // auto redirect
 onAuthStateChanged(auth, async (user) => {
+  
   if (checked) return;
   checked = true;
 
   if (user) {
     const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (!userDoc.exists()) {
+      status.innerText = "ไม่พบข้อมูล user";
+      return;
+    }
     const roles = userDoc.data()?.roles || [];
 
     if (roles.includes("coach") || roles.includes("staff")) {
