@@ -183,70 +183,13 @@ button:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
-
-.role-box {
-  margin-top: 10px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.role-btn {
-  flex: 1;
-  padding: 6px;
-  font-size: 11px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #f3f4f6;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.role-btn:hover {
-  background: #e5e7eb;
-}
-
-.role-btn.active {
-  background: #7c3aed;
-  color: white;
-  border: none;
-}
-
-#searchInput {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-}
-
-.btn-create {
-  background:#22c55e;
-  color:white;
-  padding:10px 16px;
-  border-radius:10px;
-  text-decoration:none;
-  font-size:14px;
-  font-weight:500;
-  transition:0.2s;
-}
-
-.btn-create:hover {
-  background:#16a34a;
-  transform:translateY(-1px);
-}
 </style>
 </head>
 
 <body>
 
 <h2>🏃‍♂️ Coach Dashboard</h2>
-<br>
-<div class="action-bar">
-  <a href="assign-trainning.html" class="btn-create">➕ สร้างโปรแกรม</a>
-  <a href="athlete-dashboard.html" class="btn-create">My Profile</a>
-</div>
-<br><br>
+
 <!-- 
 <div class="card">
   <table>
@@ -273,7 +216,6 @@ button:hover {
   <div id="athleteGrid" class="grid"></div>
 </div>
 
-<hr>
 <div class="card">
   <h3>📅 Calendar รวม</h3>
   <div id="calendar"></div>
@@ -339,7 +281,6 @@ function timeToSec(t){
          999999;
 }
 
-
 // 🔥 AUTH
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
@@ -351,7 +292,8 @@ onAuthStateChanged(auth, async (user)=>{
   const roles = userDoc.data()?.roles || [];
 
   if(!roles.includes("coach") && !roles.includes("staff")){
-    location.href="athlete-dashboard.html";
+    alert("ไม่มีสิทธิ์");
+    location.href="profile.html";
     return;
   }
 
@@ -390,6 +332,34 @@ onAuthStateChanged(auth, async (user)=>{
   // =========================
   users.sort((a,b)=>timeToSec(a.pb5k)-timeToSec(b.pb5k));
   usersGlobal = users;
+  tableBody.innerHTML="";
+  users.forEach((u,i)=>{
+    tableBody.innerHTML += `
+      <tr>
+        <td>${i+1}</td>
+        <td>${u.name}</td>
+        <td>${u.weight}</td>
+        <td>${u.height}</td>
+        <td>${u.pb5k||"-"}</td>
+        <td>${u.pb10k||"-"}</td>
+        <td>${u.pb21k||"-"}</td>
+        <td>${u.pb42k||"-"}</td>
+        <td>
+          <button onclick='toggleRole("${u.uid}","coach")'>
+            ${(u.roles || []).includes("coach") ? "✅ Coach" : "❌ Coach"}
+          </button>
+
+          <button onclick='toggleRole("${u.uid}","staff")'>
+            ${(u.roles || []).includes("staff") ? "✅ Staff" : "❌ Staff"}
+          </button>
+
+          <button onclick='toggleRole("${u.uid}","athlete")'>
+            ${(u.roles || []).includes("athlete") ? "✅ Athlete" : "❌ Athlete"}
+          </button>
+      </td>
+      </tr>
+    `;
+  });
 
   // =========================
   // 🔥 DASHBOARD DATA
@@ -440,43 +410,17 @@ onAuthStateChanged(auth, async (user)=>{
     });
 
     // 🎴 CARD
-    //<div class="athlete-card" onclick='openAthlete("${u.uid}")'>
-    athleteGrid.innerHTML += `
-        <div class="athlete-card" onclick='goProfile("${u.uid}")'>
-        
-        <div class="athlete-name">
-          ${u.name} (${u.nickname})
-        </div>
+athleteGrid.innerHTML += `
+  <div class="athlete-card" onclick='openAthlete("${u.uid}")'>
+    <div class="athlete-name">
+      ${u.name} (${u.nickname})
+    </div>
 
-        <div class="badge week">Week: ${weekKm.toFixed(1)} km</div>
-        <div class="badge month">Month: ${monthKm.toFixed(1)} km</div>
-        <div class="badge race">🏁 ${nextRace}</div>
-
-        <!-- 🔥 ROLE BUTTON -->
-        <div class="role-box" onclick="event.stopPropagation()">
-          
-          <button 
-            class="role-btn ${u.roles.includes("coach") ? "active" : ""}"
-            onclick='toggleRole("${u.uid}","coach")'>
-            Coach
-          </button>
-
-          <button 
-            class="role-btn ${u.roles.includes("staff") ? "active" : ""}"
-            onclick='toggleRole("${u.uid}","staff")'>
-            Staff
-          </button>
-
-          <button 
-            class="role-btn ${u.roles.includes("athlete") ? "active" : ""}"
-            onclick='toggleRole("${u.uid}","athlete")'>
-            Athlete
-          </button>
-
-        </div>
-
-      </div>
-    `;
+    <div class="badge week">Week: ${weekKm.toFixed(1)} km</div>
+    <div class="badge month">Month: ${monthKm.toFixed(1)} km</div>
+    <div class="badge race">🏁 ${nextRace}</div>
+  </div>
+`;
   }
 
   // =========================
@@ -640,11 +584,6 @@ window.openAthlete = function(uid){
 
 window.closeAthleteModal = function(){
   document.getElementById("athleteModal").style.display = "none";
-};
-
-//goProfile 
-window.goProfile = function(uid){
-  window.location.href = "athlete-profile.html?uid=" + uid;
 };
 </script>
 
