@@ -39,14 +39,14 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     userText.innerText = "คุณคือ: " + user.email;
   } else {
-    window.location.href = "login.html"; // ❌ ไม่ได้ login → เด้งกลับ
+    window.location.href = "index.html"; // ❌ ไม่ได้ login → เด้งกลับ
   }
 });
 
 // logout
 window.logout = function() {
   signOut(auth).then(() => {
-    window.location.href = "login.html";
+    window.location.href = "index.html";
   });
 }
 </script>
