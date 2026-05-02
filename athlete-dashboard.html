@@ -198,6 +198,50 @@ body {
   background:#f51d1d !important;
   border:none !important;
 }
+
+/* header row */
+.card-header-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+/* logout button */
+.btn-logout {
+  background:#ef4444;
+  color:white;
+  border:none;
+  padding:6px 12px;
+  border-radius:8px;
+  font-size:12px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+/* hover */
+.btn-logout:hover {
+  background:#dc2626;
+  transform:translateY(-1px);
+}
+
+/* click */
+.btn-logout:active {
+  transform:scale(0.95);
+}
+
+/* mobile responsive */
+@media (max-width:600px){
+  .card-header-row {
+    flex-direction:column;
+    align-items:flex-start;
+    gap:8px;
+  }
+
+  .btn-logout {
+    width:100%;
+  }
+}
 </style>
 </head>
 
@@ -207,7 +251,10 @@ body {
 
 <!-- 👤 PROFILE -->
 <div class="card">
-  <h3>👤 ข้อมูลนักกีฬา</h3>
+  <div class="card-header-row">
+    <h3>👤 ข้อมูลนักกีฬา</h3>
+    <button class="btn-logout" onclick="signOutUser()">Sign Out</button>
+  </div>
   <div class="profile" id="profile"></div>
 </div>
 
@@ -268,7 +315,7 @@ body {
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signOut, onAuthStateChanged  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   getFirestore,
   doc,
@@ -299,7 +346,7 @@ let currentUser = null;
 onAuthStateChanged(auth, async(user)=>{
     currentUser = user;
     if(!user){
-      location.href="login.html";
+      location.href="index.html";
       return;
     }
 
@@ -475,10 +522,11 @@ window.goSubmit = function(date) {
 };
 
 // Modal Race
+/*
 window.openRaceModal = function(date){
   document.getElementById("raceDate").value = date;
   document.getElementById("raceModal").style.display = "flex";
-};
+};*/
 
 window.closeRaceModal = function(){
   document.getElementById("raceModal").style.display = "none";
@@ -525,6 +573,20 @@ window.saveRace = async function(){
 
   } catch(e){
     alert(e.message);
+  }
+};
+
+//Sign-out
+window.signOutUser = async function(){
+  try {
+    await signOut(auth);
+
+    // clear session (กัน redirect bug)
+    sessionStorage.clear();
+
+    window.location.replace("index.html");
+  } catch (e) {
+    alert("Logout ไม่สำเร็จ");
   }
 };
 </script>

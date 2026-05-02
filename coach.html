@@ -388,6 +388,29 @@ hr {
   );
   margin: 10px 0;
 }
+
+/* logout button */
+.btn-logout {
+  background:#ef4444;
+  color:white;
+  border:none;
+  padding:6px 12px;
+  border-radius:8px;
+  font-size:12px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+/* hover */
+.btn-logout:hover {
+  background:#dc2626;
+  transform:translateY(-1px);
+}
+
+/* click */
+.btn-logout:active {
+  transform:scale(0.95);
+}
 </style>
 </head>
 
@@ -432,6 +455,7 @@ hr {
   <div class="right">
     <a href="assign-trainning.html" class="btn-create">➕ สร้างโปรแกรม</a>
     <a href="athlete-dashboard.html" class="btn-create">My Profile</a>
+    <button class="btn-logout" onclick="signOutUser()">Sign Out</button>
   </div>
 
 </div>
@@ -452,7 +476,7 @@ hr {
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth,signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   getFirestore,
   collection,
@@ -822,6 +846,20 @@ window.closeModal = function(){
 
 window.goProfile = function(uid){
   window.location.href = "athlete-profile.html?uid=" + uid;
+};
+
+//Sign-out
+window.signOutUser = async function(){
+  try {
+    await signOut(auth);
+
+    // clear session (กัน redirect bug)
+    sessionStorage.clear();
+
+    window.location.replace("index.html");
+  } catch (e) {
+    alert("Logout ไม่สำเร็จ");
+  }
 };
 </script>
 
