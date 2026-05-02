@@ -61,11 +61,18 @@ body {
 
 /* 🔥 event color */
 .easy { background:#22c55e !important; border:none !important; }
-.interval { background:#d818f6 !important; border:none !important; }
+.interval { background:#f61818 !important; border:none !important; }
 .tempo { background:#f97316 !important; border:none !important; }
 .longrun { background:#3b82f6 !important; border:none !important; }
 .rest { background:#9ca3af !important; border:none !important; }
+.race-event { background:#facc15 !important; color:black !important; }
+.fc .race-event .fc-event-main {
+  color: black !important;
+}
 
+.fc .race-event .fc-event-title {
+  color: black !important;
+}
 #modal {
   position:fixed;
   top:0;
@@ -390,10 +397,11 @@ onAuthStateChanged(auth, async(user)=>{
       events.push({
         title: "🏁 " + r.name,
         start: r.date,
-        classNames: ["race"],
+        classNames: ["race-event"],
 
         extendedProps: {
           category: "race",
+          race_name : r.name,
           distance: r.distance,
           note: r.note
         }
@@ -440,6 +448,7 @@ onAuthStateChanged(auth, async(user)=>{
         if (cat === "race") {
           content = `
             <p><b>🏁 วันแข่ง</b></p>
+            <p>รายการ: ${e.extendedProps.race_name}</p>
             <p>ระยะ: ${e.extendedProps.distance}</p>
             <p>${e.extendedProps.note || ""}</p>
           `;

@@ -80,7 +80,13 @@ tr:nth-child(even) {
 .tempo { background:#f97316 !important; }
 .longrun { background:#3b82f6 !important; }
 .race-event { background:#facc15 !important; color:black !important; }
+.fc .race-event .fc-event-main {
+  color: black !important;
+}
 
+.fc .race-event .fc-event-title {
+  color: black !important;
+}
 button {
   padding:6px 10px;
   border-radius:8px;
@@ -185,39 +191,58 @@ button:hover {
 }
 
 .role-box {
-  margin-top: 10px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  margin-top:10px;
+  display:flex;
+  gap:6px;
 }
 
 .role-btn {
-  flex: 1;
-  padding: 6px;
-  font-size: 11px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #f3f4f6;
-  cursor: pointer;
-  transition: 0.2s;
+  flex:1;
+  padding:6px;
+  border:none;
+  border-radius:8px;
+  font-size:12px;
+  cursor:pointer;
+  background:#e5e7eb;
 }
 
-.role-btn:hover {
-  background: #e5e7eb;
-}
-
+/* active base */
 .role-btn.active {
-  background: #7c3aed;
-  color: white;
-  border: none;
+  color:white;
 }
 
-#searchInput {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
+/* แยกสี */
+.role-btn.coach.active {
+  background:#7c3aed;
+}
+
+.role-btn.staff.active {
+  background:#0ea5e9;
+}
+
+.role-btn.athlete.active {
+  background:#22c55e;
+}
+
+
+.role-btn {
+  transition: all 0.2s ease;
+  transform: scale(1);
+}
+
+.role-btn:active {
+  transform: scale(0.9);
+}
+
+/* เด้งตอน toggle */
+.role-btn.animate {
+  animation: pop 0.25s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 .btn-create {
@@ -234,6 +259,11 @@ button:hover {
 .btn-create:hover {
   background:#16a34a;
   transform:translateY(-1px);
+}
+
+.role-btn.locked {
+  background: #ef4444 !important;
+  color: white;
 }
 </style>
 </head>
@@ -322,25 +352,18 @@ const firebaseConfig = {
   appId: "1:145488848267:web:e8daabea6061c818fb7b8e",
   measurementId: "G-5FCB6D998V"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const tableBody = document.getElementById("tableBody");
 const athleteGrid = document.getElementById("athleteGrid");
+
 let usersGlobal = [];
 
-// ⏱️ helper
-function timeToSec(t){
-  if (!t || t === "-") return 999999;
-  const p = t.split(":").map(Number);
-  return p.length === 2 ? p[0]*60+p[1] :
-         p.length === 3 ? p[0]*3600+p[1]*60+p[2] :
-         999999;
-}
-
-
+// =========================
 // 🔥 AUTH
+// =========================
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     location.href="login.html";
@@ -356,7 +379,7 @@ onAuthStateChanged(auth, async (user)=>{
   }
 
   // =========================
-  // 🔥 โหลด USERS
+  // 🔥 LOAD USERS
   // =========================
   const snapshot = await getDocs(collection(db,"users"));
 
@@ -379,20 +402,16 @@ onAuthStateChanged(auth, async (user)=>{
     });
   });
 
-  // 🔥 สร้าง map หลังจากมี users แล้ว
-  const userMap = {};
+  usersGlobal = users;
 
+  // 🔥 map
+  const userMap = {};
   users.forEach(u => {
     userMap[u.uid] = `${u.name} (${u.nickname})`;
   });
-  // =========================
-  // 🔥 TABLE
-  // =========================
-  users.sort((a,b)=>timeToSec(a.pb5k)-timeToSec(b.pb5k));
-  usersGlobal = users;
 
   // =========================
-  // 🔥 DASHBOARD DATA
+  // 🔥 DASHBOARD
   // =========================
   let events = [];
   athleteGrid.innerHTML="";
@@ -425,7 +444,6 @@ onAuthStateChanged(auth, async (user)=>{
     let nextRace="-";
 
     raceSnap.forEach(r=>{
-      
       const d=r.data();
 
       if(new Date(d.date)>new Date()){
@@ -433,16 +451,28 @@ onAuthStateChanged(auth, async (user)=>{
       }
 
       events.push({
-        title:`🏁 ${u.name}`,
-        start:d.date,
-        classNames:["race-event"]
+        title: `🏁 ${u.nickname} • ${d.name}`,
+        start: d.date,
+        classNames: ["race-event"],
+
+        extendedProps: {
+          type: "race",
+          raceName: d.name,
+          athletes: [
+            {
+              name: u.name,
+              nickname: u.nickname,
+              distance: d.distance || "-",
+              note: d.note || "-"
+            }
+          ]
+        }
       });
     });
 
     // 🎴 CARD
-    //<div class="athlete-card" onclick='openAthlete("${u.uid}")'>
     athleteGrid.innerHTML += `
-        <div class="athlete-card" onclick='goProfile("${u.uid}")'>
+      <div class="athlete-card" onclick='goProfile("${u.uid}")'>
         
         <div class="athlete-name">
           ${u.name} (${u.nickname})
@@ -452,29 +482,27 @@ onAuthStateChanged(auth, async (user)=>{
         <div class="badge month">Month: ${monthKm.toFixed(1)} km</div>
         <div class="badge race">🏁 ${nextRace}</div>
 
-        <!-- 🔥 ROLE BUTTON -->
         <div class="role-box" onclick="event.stopPropagation()">
           
           <button 
-            class="role-btn ${u.roles.includes("coach") ? "active" : ""}"
-            onclick='toggleRole("${u.uid}","coach")'>
+            class="role-btn ${u.roles.includes("coach") ? "active coach" : ""}"
+            onclick='toggleRole("${u.uid}","coach", this)'>
             Coach
           </button>
 
           <button 
-            class="role-btn ${u.roles.includes("staff") ? "active" : ""}"
-            onclick='toggleRole("${u.uid}","staff")'>
+            class="role-btn ${u.roles.includes("staff") ? "active staff" : ""}"
+            onclick='toggleRole("${u.uid}","staff", this)'>
             Staff
           </button>
 
           <button 
-            class="role-btn ${u.roles.includes("athlete") ? "active" : ""}"
-            onclick='toggleRole("${u.uid}","athlete")'>
+            class="role-btn ${u.roles.includes("athlete") ? "active athlete" : ""}"
+            onclick='toggleRole("${u.uid}","athlete", this)'>
             Athlete
           </button>
 
         </div>
-
       </div>
     `;
   }
@@ -484,165 +512,197 @@ onAuthStateChanged(auth, async (user)=>{
   // =========================
   const grouped = {};
 
-function addEvent(date, type, name){
-  const key = date + "_" + type;
+  function addEvent(date, type, athlete){
+    const key = date + "_" + type;
 
-  if(!grouped[key]){
-    grouped[key] = {
-      date,
-      type,
-      count: 0,
-      names: []
-    };
+    if(!grouped[key]){
+      grouped[key] = {
+        date,
+        type,
+        count: 0,
+        athletes: []
+      };
+    }
+
+    grouped[key].count++;
+    grouped[key].athletes.push(athlete);
   }
 
-  grouped[key].count++;
-  grouped[key].names.push(name);
-}
+  // 🔥 โหลด programs
+  const programSnap = await getDocs(collection(db,"programs"));
 
-// 🔥 โหลด programs
-const programSnap = await getDocs(collection(db,"programs"));
+  programSnap.forEach(docSnap=>{
+    const p = docSnap.data();
+    const start = new Date(p.startDate);
 
-programSnap.forEach(docSnap=>{
-  const p = docSnap.data();
-  const start = new Date(p.startDate);
+    const dayMap = {
+      mon: 0,
+      tue: 1,
+      wed: 2,
+      thu: 3,
+      fri: 4,
+      sat: 5,
+      sun: 6
+    };
 
-  const dayMap = {
-    mon: 0,
-    tue: 1,
-    wed: 2,
-    thu: 3,
-    fri: 4,
-    sat: 5,
-    sun: 6
-  };
+    Object.entries(p.schedule || {}).forEach(([day,val])=>{
+      if(!val?.type) return;
 
-  Object.entries(p.schedule).forEach(([day,val])=>{
-    if(!val?.type) return;
+      const d = new Date(start);
+      d.setDate(start.getDate() + dayMap[day]);
 
-    const d = new Date(start);
-    d.setDate(start.getDate() + dayMap[day]);
+      const dateStr = d.toISOString().split("T")[0];
 
-    const dateStr = d.toISOString().split("T")[0];
-
-    // ✅ ใช้ athleteId จาก program
-    addEvent(
-      dateStr,
-      val.type,
-      userMap[p.athleteId] || "Unknown"
-    );
+      addEvent(dateStr, val.type, {
+        name: userMap[p.athleteId] || "Unknown",
+        detail: val.detail || "-",
+        note: val.note || "-"
+      });
+    });
   });
-});
 
-// 🔥 แปลง grouped → events
-Object.values(grouped).forEach(e=>{
-  events.push({
-    title: `${e.type} (${e.count})`,
-    start: e.date,
-    classNames: [e.type],
-    extendedProps: {
-      names: e.names
-    }
+  // 🔥 convert grouped → events
+  Object.values(grouped).forEach(e=>{
+    events.push({
+      title: `${e.type} (${e.count})`,
+      start: e.date,
+      classNames: [e.type],
+
+      extendedProps: {
+        type: "training",
+        athletes: e.athletes
+      }
+    });
   });
-});
+
   // =========================
   // 📅 CALENDAR
   // =========================
-const calendar = new FullCalendar.Calendar(
-  document.getElementById("calendar"),
-  {
-    initialView: "dayGridMonth",
-    height: "auto",
-    dayMaxEvents: true,
+  const calendar = new FullCalendar.Calendar(
+    document.getElementById("calendar"),
+    {
+      initialView: "dayGridMonth",
+      height: "auto",
+      dayMaxEvents: true,
+      events: events,
 
-    events: events,
+      eventClick: function(info){
+        const e = info.event;
+        const athletes = e.extendedProps.athletes || [];
 
-    eventClick: function(info){
-    const names = info.event.extendedProps.names || [];
+        document.getElementById("modalTitle").innerText =
+          "📅 " + e.startStr;
 
-    document.getElementById("modalTitle").innerText =
-      "📅 " + info.event.startStr;
+        // 🏁 RACE
+        if(e.extendedProps.type === "race"){
+          document.getElementById("modalBody").innerHTML = `
+            <div>🏁 ${e.extendedProps.raceName}</div>
+            <hr>
+            ${athletes.map(a => `
+              <div>
+                👤 ${a.nickname}<br>
+                📏 ${a.distance} km<br>
+                📝 ${a.note}
+              </div>
+            `).join("")}
+          `;
+        }
 
-    document.getElementById("modalBody").innerHTML =
-      names.map(n => `<div>👤 ${n}</div>`).join("");
+        // 🏃 TRAINING
+        else {
+          document.getElementById("modalBody").innerHTML = `
+            <div>🏃 ${e.title}</div>
+            <hr>
+            ${athletes.map(a => `
+              <div>
+                👤 ${a.name}<br>
+                📋 ${a.detail}<br>
+                📝 ${a.note}
+              </div>
+            `).join("")}
+          `;
+        }
 
-    document.getElementById("modal").style.display = "flex";
+        document.getElementById("modal").style.display = "flex";
+      }
     }
-  }
-);
+  );
 
-calendar.render();
+  calendar.render();
 });
 
 // =========================
-// 🔥 TOGGLE ROLE
+// 🔥 ROLE
 // =========================
-window.toggleRole = async function(uid, role) {
+window.toggleRole = async function(uid, role, btn){
   try {
     const userRef = doc(db, "users", uid);
-
-    // 🔥 โหลด roles ล่าสุด
     const snap = await getDoc(userRef);
     const roles = snap.data().roles || [];
 
     // ❗ กันลบ coach ตัวเอง
     if (uid === auth.currentUser.uid && role === "coach") {
-      alert("ห้ามลบสิทธิ์ coach ของตัวเอง");
+      showLock(btn);
       return;
     }
 
-    if (roles.includes(role)) {
-      await updateDoc(userRef, {
-        roles: arrayRemove(role)
-      });
-      alert("ลบ " + role);
-    } else {
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = "⏳";
+
+    let isAdd = !roles.includes(role);
+
+    if (isAdd) {
       await updateDoc(userRef, {
         roles: arrayUnion(role)
       });
-      alert("เพิ่ม " + role);
+      btn.classList.add("active", role);
+    } else {
+      await updateDoc(userRef, {
+        roles: arrayRemove(role)
+      });
+      btn.classList.remove("active", role);
     }
 
-    location.reload();
+    btn.innerHTML = original;
+    btn.disabled = false;
+
+    animateBtn(btn);
 
   } catch (e) {
     console.error(e);
-    alert(e.message);
+    btn.disabled = false;
   }
 };
 
-
-window.closeModal = function(){
-  document.getElementById("modal").style.display = "none";
+function animateBtn(btn){
+  btn.classList.add("animate");
+  setTimeout(()=>{
+    btn.classList.remove("animate");
+  }, 250);
 }
 
-//Athlete Modal
-window.openAthlete = function(uid){
+function showLock(btn){
+  if(!btn) return;
 
-  const u = usersGlobal.find(x => x.uid === uid);
-  if(!u) return;
+  const original = btn.innerHTML;
 
-  document.getElementById("athleteModalTitle").innerText =
-    u.name + " (" + u.nickname + ")";
+  btn.classList.add("locked");
+  btn.innerHTML = "🔒";
 
-  document.getElementById("athleteModalBody").innerHTML = `
-    <div>น้ำหนัก: ${u.weight} kg</div>
-    <div>ส่วนสูง: ${u.height} cm</div>
-    <div>PB 5K: ${u.pb5k || "-"}</div>
-    <div>PB 10K: ${u.pb10k || "-"}</div>
-    <div>PB 21K: ${u.pb21k || "-"}</div>
-    <div>PB 42K: ${u.pb42k || "-"}</div>
-    <div>สิทธิ์: ${(u.roles || []).join(", ")}</div>
-  `;
-
-  document.getElementById("athleteModal").style.display = "flex";
+  setTimeout(()=>{
+    btn.innerHTML = original;
+    btn.classList.remove("locked");
+    alert("ไม่สามารถลบสิทธิ์ coach ตัวเองได้");
+  }, 1000);
+}
+// =========================
+// 🔥 UI
+// =========================
+window.closeModal = function(){
+  document.getElementById("modal").style.display = "none";
 };
 
-window.closeAthleteModal = function(){
-  document.getElementById("athleteModal").style.display = "none";
-};
-
-//goProfile 
 window.goProfile = function(uid){
   window.location.href = "athlete-profile.html?uid=" + uid;
 };
