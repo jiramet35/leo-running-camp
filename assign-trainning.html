@@ -18,7 +18,7 @@ body {
 }
 
 .container {
-  max-width:900px;
+  max-width:100%;
   margin:auto;
 }
 
@@ -32,6 +32,19 @@ body {
 h2 {
   text-align:center;
   margin-bottom:20px;
+}
+
+
+hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    #e4e4e4,
+    transparent
+  );
+  margin: 10px 0;
 }
 
 input, select, textarea {
@@ -49,7 +62,7 @@ input, select, textarea {
 }
 
 .day-card {
-  padding:12px;
+  padding:12px 30px;
   border-radius:12px;
   border:1px solid #eee;
   background:#fafafa;
@@ -152,16 +165,16 @@ button {
 <div class="container">
 <div class="card">
 
-<h2>📅 Assign Training</h2>
+<h2>📅 Assign Training Plan</h2>
 
 <!-- 👤 athlete -->
 <select id="athleteSelect">
   <option value="">เลือกนักกีฬา</option>
 </select>
-
+<hr>
 <!-- 📅 range -->
 <input type="text" id="dateRange" placeholder="เลือกช่วงวันที่">
-
+<hr>
 <!-- 🔥 grid -->
 <div class="grid" id="grid"></div>
 
@@ -216,20 +229,22 @@ days.forEach(d=>{
         <option value="longrun">Long Run</option>
         <option value="rest">Rest</option>
       </select>
-
+      <hr>
       <!-- detail -->
       <input id="${d}_detail" placeholder="เช่น 5x1k / 8k jog">
-
+      <hr>
+      <input id="${d}_dist" placeholder="กรอกระยะรวมของวันนี้">
+      <hr>
       <!-- weight training -->
         <label class="checkbox-wrap">
             <input type="checkbox" id="${d}_weight_training">
             <span class="checkmark"></span>
             <span class="label-text">เวท (Weight Training)</span>
         </label>
-
+      <hr>
       <!-- weight note -->
         <textarea id="${d}_weight_training_note" placeholder="รายละเอียดเวท"></textarea>
-
+      <hr>
       <!-- normal note -->
       <textarea id="${d}_note" placeholder="note"></textarea>
     </div>
@@ -310,6 +325,7 @@ window.saveProgram = async()=>{
     schedule[d]={
         type:document.getElementById(d+"_type").value,
         detail:document.getElementById(d+"_detail").value,
+        dist : document.getElementById(d+"_dist").value,
         note:document.getElementById(d+"_note").value,
         weight: document.getElementById(d+"_weight_training").checked,
         weight_note: document.getElementById(d+"_weight_training_note").value,

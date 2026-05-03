@@ -170,13 +170,13 @@ input[type=range] {
 
 <div class="row">
 <div class="form-group">
-<label>ระยะ (km)</label>
+<label>ระยะ (km) *** (ใส่ระยะรวมทั้งหมด)</label>
 <input id="distance" placeholder="10.50">
 </div>
 
 <div class="form-group">
-<label>เวลา</label>
-<input id="time" placeholder="00:45:30">
+<label>เพซเฉลี่ย</label>
+<input id="avg_pace" placeholder="04:30">
 </div>
 </div>
 
@@ -188,13 +188,13 @@ input[type=range] {
 </div>
 
 <div class="form-group">
-<label>Garmin / Strava</label>
+<label>Garmin / Strava *** (ใส่หรือไม่ใส่ก็ได้ / Optional )</label>
 <input id="link">
 </div>
 
 <div class="form-group">
-<label>หมายเหตุ</label>
-<textarea id="note"></textarea>
+<label>หมายเหตุ / Remark</label>
+<textarea id="note" rows="10" cols="50" placeholder="อธิบายความรู้สึกหรือระบุ avg_pace ใน แต่ละ Laps ของ Interval"></textarea>
 </div>
 
 <button onclick="submitRun()">บันทึก</button>
@@ -279,7 +279,7 @@ window.submitRun = async () => {
 
   const date = document.getElementById("date").value;
   const dist = document.getElementById("distance").value;
-  const time = document.getElementById("time").value;
+  const avg_pace = document.getElementById("avg_pace").value;
 
   // ✅ validate
   if (!date) {
@@ -293,9 +293,8 @@ window.submitRun = async () => {
     return;
   }
 
-  if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(time)) {
-    //status.innerText = "เวลาไม่ถูกต้อง";
-    alert("⚠️ ระบุเวลาไม่ถูกต้อง");
+  if (!/^(0?[0-9]|10):[0-5][0-9]$/.test(avg_pace)) {
+    alert("⚠️ ระบุเพซไม่ถูกต้อง (ตัวอย่าง 05:30)");
     return;
   }
 
@@ -319,7 +318,7 @@ window.submitRun = async () => {
       type: document.getElementById("type").value,
       completed: document.getElementById("completed").checked,
       distance: Number(dist),
-      time,
+      avg_pace,
       effort,
       link: document.getElementById("link").value,
       note: document.getElementById("note").value,
@@ -327,7 +326,10 @@ window.submitRun = async () => {
     });
 
     //status.innerText = "สำเร็จ 🎉";
-    alert("สำเร็จ 🎉");
+    setTimeout(() => {
+        alert("บันทึกสำเร็จ 🎉");
+        location.reload();
+    }, 2000);
   } catch (e) {
     console.error(e);
     status.innerText = e.message;

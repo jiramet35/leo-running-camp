@@ -79,6 +79,7 @@ tr:nth-child(even) {
 .interval { background:#ef4444 !important; }
 .tempo { background:#f97316 !important; }
 .longrun { background:#3b82f6 !important; }
+.rest { background:#8b8e93 !important; }
 .race-event { background:#facc15 !important; color:black !important; }
 .fc .race-event .fc-event-main {
   color: black !important;
@@ -411,6 +412,31 @@ hr {
 .btn-logout:active {
   transform:scale(0.95);
 }
+
+.progress-wrap {
+  margin-top: 3px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 10px;
+  transition: width 0.3s;
+}
+
+.progress-text {
+  font-size: 10px;
+  text-align: right;
+  color: #fff;
+}
 </style>
 </head>
 
@@ -583,149 +609,243 @@ onAuthStateChanged(auth, async (user)=>{
   // 🔥 DASHBOARD
   // =========================
   let events = [];
+athleteGrid.innerHTML="";
 
-  athleteGrid.innerHTML="";
+// =========================
+// 🔥 LOAD PROGRAM (เหมือนเดิม)
+// =========================
+const programSnap = await getDocs(collection(db,"programs"));
 
-  for(const u of users){
+programSnap.forEach(docSnap=>{
+  const p = docSnap.data();
+  const start = new Date(p.startDate);
 
-    // 🏃 runs
-    const runSnap = await getDocs(
-      query(collection(db,"runs"), where("userId","==",u.uid))
-    );
+  const dayMap = {
+    mon: 0,
+    tue: 1,
+    wed: 2,
+    thu: 3,
+    fri: 4,
+    sat: 5,
+    sun: 6
+  };
 
-    let weekKm=0, monthKm=0;
-    const now=new Date();
+  Object.entries(p.schedule || {}).forEach(([day,val])=>{
+    if(!val?.type) return;
 
-    runSnap.forEach(r=>{
-      const d=r.data();
-      const runDate=new Date(d.date);
+    const d = new Date(start);
+    d.setDate(start.getDate() + dayMap[day]);
 
-      const diff=(now-runDate)/(1000*60*60*24);
+    const dateStr = d.toISOString().split("T")[0];
 
-      if(diff<=7) weekKm+=d.distance||0;
-      if(runDate.getMonth()===now.getMonth()) monthKm+=d.distance||0;
+    const u = users.find(x => x.uid === p.athleteId);
+
+    events.push({
+      title: `${u?.nickname || "-"} [ ${val.type} ${val?.detail} ${val?.note} ]`,
+      start: dateStr,
+      classNames: [val.type],
+
+      extendedProps: {
+        type: "training",
+        trainingTitle : u?.name,
+        athleteId: p.athleteId,
+        athleteName: u?.name,
+        nickname: u?.nickname,
+        detail: val.detail || "-",
+        dist: val.dist || null,
+        note: val.note || "-",
+        result: null
+      }
     });
+  });
+});
 
-    // 🏁 races
-    const raceSnap = await getDocs(
-      query(collection(db,"races"), where("athleteId","==",u.uid))
+
+// =========================
+// 🔥 LOAD RUNS (แก้ตรงนี้)
+// =========================
+const runSnap = await getDocs(collection(db,"runs"));
+
+const runsByUser = {};
+
+runSnap.forEach(doc=>{
+  const d = doc.data();
+
+  if(!runsByUser[d.userId]){
+    runsByUser[d.userId] = [];
+  }
+
+  runsByUser[d.userId].push(d);
+});
+
+
+// =========================
+// 🔥 LOAD RACES (แก้ตรงนี้)
+// =========================
+const raceSnap = await getDocs(collection(db,"races"));
+
+const racesByUser = {};
+
+raceSnap.forEach(doc=>{
+  const d = doc.data();
+
+  if(!racesByUser[d.athleteId]){
+    racesByUser[d.athleteId] = [];
+  }
+
+  racesByUser[d.athleteId].push(d);
+});
+
+
+// =========================
+// 🔥 LOOP USERS
+// =========================
+for(const u of users){
+
+  const userRuns = runsByUser[u.uid] || [];
+  const userRaces = racesByUser[u.uid] || [];
+
+  let weekKm=0, monthKm=0;
+  const now=new Date();
+
+  // =========================
+  // 🏃 RUN STATS
+  // =========================
+  userRuns.forEach(d=>{
+    const runDate=new Date(d.date);
+    const diff=(now-runDate)/(1000*60*60*24);
+    
+    if(diff<=7) weekKm+=d.distance||0;
+    if(runDate.getMonth()===now.getMonth()) monthKm+=d.distance||0;
+  });
+
+  // =========================
+  // 🏁 RACES
+  // =========================
+  let nextRace="-";
+
+  userRaces.forEach(d=>{
+    if(new Date(d.date)>new Date()){
+      nextRace = `${d.name} (${d.date})`;
+    }
+
+    events.push({
+      title: `🏁 ${u.nickname} • ${d.name}`,
+      start: d.date,
+      classNames: ["race-event"],
+
+      extendedProps: {
+        type: "race",
+        athleteId: u.uid,
+        athleteName: u.name,
+        nickname: u.nickname,
+        raceName: d.name,
+        distance: d.distance || "-",
+        note: d.note || "-"
+      }
+    });
+  });
+
+  // =========================
+  // 🔥 MERGE COMPLETED RUN
+  // =========================
+  userRuns.forEach(d=>{
+    if(!d.completed) return;
+
+    const found = events.find(ev =>
+      ev.start === d.date &&
+      ev.extendedProps?.athleteId === u.uid &&
+      ev.extendedProps?.type === "training"
     );
 
-    let nextRace="-";
+    
+    if(found){
+      const dist = Number(found.extendedProps?.dist || 0);
+      const training_dist = Number(d.distance || 0);
+      let progress = 0;
 
-    raceSnap.forEach(r=>{
-      const d=r.data();
-
-      if(new Date(d.date)>new Date()){
-        nextRace = `${d.name} (${d.date})`;
+      if(dist > 0){
+        progress = (training_dist / dist) * 100;
       }
 
+      found.extendedProps.result = {
+        distance: d.distance,
+        avg_pace: d.avg_pace,
+        effort: d.effort,
+        note: d.note,
+        link: d.link,
+        type: d.type
+      };
+
+      progress = Math.min(100, progress);
+      const progressText = progress.toFixed(0); // ไม่มีทศนิยม
+      let icon = "❌";
+      if(progress >= 100) icon = "✅";
+
+      found.title = `${icon} ${u.nickname} ${progressText}%  [ ${d.type} ${found.extendedProps.detail} ]`;
+      found.classNames.push("completed-run");
+
+    } else {
+
       events.push({
-        title: `🏁 ${u.nickname} • ${d.name}`,
+        title: `✔ ${u.nickname}`,
         start: d.date,
-        
-        classNames: ["race-event"],
+        classNames: ["completed-run"],
 
         extendedProps: {
-          type: "race",
-          athleteId: u.uid, // ⭐ เพิ่ม
-          athleteName: u.name,
+          type: "completed",
+          athleteId: u.uid,
           nickname: u.nickname,
-          raceName: d.name,
-          distance: d.distance || "-",
-          note: d.note || "-"
+          result: d
         }
       });
-    });
+    }
+  });
 
-    // 🎴 CARD
-    athleteGrid.innerHTML += `
-      <div class="athlete-card" onclick='goProfile("${u.uid}")'>
-        
-        <div class="athlete-name">
-          ${u.name} (${u.nickname})
-        </div>
-
-        <div class="badge week">Week: ${weekKm.toFixed(1)} km</div>
-        <div class="badge month">Month: ${monthKm.toFixed(1)} km</div>
-        <div class="badge race">🏁 ${nextRace}</div>
-
-        <div class="role-box" onclick="event.stopPropagation()">
-          
-          <button 
-            class="role-btn ${u.roles.includes("coach") ? "active coach" : ""}"
-            onclick='toggleRole("${u.uid}","coach", this)'>
-            Coach
-          </button>
-
-          <button 
-            class="role-btn ${u.roles.includes("staff") ? "active staff" : ""}"
-            onclick='toggleRole("${u.uid}","staff", this)'>
-            Staff
-          </button>
-
-          <button 
-            class="role-btn ${u.roles.includes("athlete") ? "active athlete" : ""}"
-            onclick='toggleRole("${u.uid}","athlete", this)'>
-            Athlete
-          </button>
-
-        </div>
+  // =========================
+  // 🎴 CARD (เหมือนเดิม)
+  // =========================
+  athleteGrid.innerHTML += `
+    <div class="athlete-card" onclick='goProfile("${u.uid}")'>
+      
+      <div class="athlete-name">
+        ${u.name} (${u.nickname})
       </div>
-    `;
-  }
+
+      <div class="badge week">Week: ${weekKm.toFixed(1)} km</div>
+      <div class="badge month">Month: ${monthKm.toFixed(1)} km</div>
+      <div class="badge race">🏁 ${nextRace}</div>
+
+      <div class="role-box" onclick="event.stopPropagation()">
+        
+        <button 
+          class="role-btn ${u.roles.includes("coach") ? "active coach" : ""}"
+          onclick='toggleRole("${u.uid}","coach", this)'>
+          Coach
+        </button>
+
+        <button 
+          class="role-btn ${u.roles.includes("staff") ? "active staff" : ""}"
+          onclick='toggleRole("${u.uid}","staff", this)'>
+          Staff
+        </button>
+
+        <button 
+          class="role-btn ${u.roles.includes("athlete") ? "active athlete" : ""}"
+          onclick='toggleRole("${u.uid}","athlete", this)'>
+          Athlete
+        </button>
+
+      </div>
+    </div>
+  `;
+}
 
   // =========================
   // 🔥 PROGRAM → CALENDAR
   // =========================
 
-  // 🔥 โหลด programs
-  const programSnap = await getDocs(collection(db,"programs"));
-
-  programSnap.forEach(docSnap=>{
-    const p = docSnap.data();
-    const start = new Date(p.startDate);
-
-    const dayMap = {
-      mon: 0,
-      tue: 1,
-      wed: 2,
-      thu: 3,
-      fri: 4,
-      sat: 5,
-      sun: 6
-    };
-
-    Object.entries(p.schedule || {}).forEach(([day,val])=>{
-      console.log(val);
-      
-      if(!val?.type) return;
-
-      const d = new Date(start);
-      d.setDate(start.getDate() + dayMap[day]);
-
-      const dateStr = d.toISOString().split("T")[0];
-
-      const u = users.find(x => x.uid === p.athleteId);
-
-      events.push({
-        title: `${u?.nickname || "-"} [ ${val.type} ${val?.detail} ${val?.note} ]`,
-        start: dateStr,
-        classNames: [val.type],
-
-        extendedProps: {
-          type: "training",
-          trainingTitle : u?.name,
-          athleteId: p.athleteId, // ⭐ สำคัญ (ใช้ filter)
-          athleteName: u?.name,
-          nickname: u?.nickname,
-          detail: val.detail || "-",
-          note: val.note || "-"
-        }
-      });
-    });
-  });
-
+  
   //==========================
   //
   //==========================
@@ -748,24 +868,71 @@ onAuthStateChanged(auth, async (user)=>{
         document.getElementById("modalTitle").innerText =
           "📅 " + e.startStr;
 
-        if(e.extendedProps.type === "race"){
-          document.getElementById("modalBody").innerHTML = `
-            <div>🏁 ${e.extendedProps.raceName}</div>
+        if(e.extendedProps.type === "training"){
+
+          const r = e.extendedProps.result;
+
+          modalBody.innerHTML = `
+            <div>🏃 ${e.extendedProps.detail}</div>
             <div>👤 ${e.extendedProps.nickname}</div>
-            <div>📏 ${e.extendedProps.distance} km</div>
-            <div>📝 ${e.extendedProps.note}</div>
-          `;
-        } else {
-          document.getElementById("modalBody").innerHTML = `
-            <div>🏃 ${e.title}</div>
-            <div>👤 ${e.extendedProps.nickname}</div>
-            <div>📋 ${e.extendedProps.detail}</div>
-            <div>📝 ${e.extendedProps.note}</div>
+
+            <hr>
+
+            <div><b>📋 โปรแกรม</b></div>
+            <div>${e.extendedProps.detail || "-"}</div>
+            <div>${e.extendedProps.note || "-"}</div>
+
+            ${
+              r ? `
+                <hr>
+                <div style="color:#10b981"><b>✔ ผลวิ่ง</b></div>
+                <div>📏 ${r.distance} km</div>
+                <div>⏱ ${r.avg_pace}</div>
+                <div>💪 Effort: ${r.effort}</div>
+                <div>📝 ${r.note}</div>
+                ${
+                  r.link
+                  ? `<a href="${r.link}" target="_blank" class="modal-link">🔗 เปิด Garmin</a>`
+                  : ""
+                }
+              `
+              : `<div style="color:#ef4444">❌ ยังไม่ส่งผล</div>`
+            }
           `;
         }
 
         document.getElementById("modal").style.display = "flex";
-      }
+      },eventContent: function(arg){
+
+          const e = arg.event;
+          const p = e.extendedProps.progress;
+
+          // ⭐ ชื่อ
+          let title = `<div>${e.title}</div>`;
+
+          // ⭐ progress bar (มีเฉพาะ training ที่มี result)
+          let progressHTML = "";
+
+          if(p !== undefined){
+            progressHTML = `
+              <div class="progress-wrap">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width:${p}%"></div>
+                </div>
+                <div class="progress-text">${p.toFixed(0)}%</div>
+              </div>
+            `;
+          }
+
+          return {
+            html: `
+              <div style="font-size:11px">
+                ${title}
+                ${progressHTML}
+              </div>
+            `
+          };
+        }
     }
   );
 
