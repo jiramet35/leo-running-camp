@@ -730,7 +730,7 @@ for(const u of users){
     }
 
     events.push({
-      title: `🏁 ${u.nickname} • ${d.name}`,
+      title: `🏁 ${u.nickname} • ${d.name} ระยะ ${d.distance}`,
       start: d.date,
       classNames: ["race-event"],
 
@@ -867,7 +867,8 @@ for(const u of users){
 
         document.getElementById("modalTitle").innerText =
           "📅 " + e.startStr;
-
+        console.log(e.extendedProps.type);
+        
         if(e.extendedProps.type === "training"){
 
           const r = e.extendedProps.result;
@@ -898,6 +899,20 @@ for(const u of users){
               `
               : `<div style="color:#ef4444">❌ ยังไม่ส่งผล</div>`
             }
+          `;
+        }else if(e.extendedProps.type === "race"){
+          const r = e.extendedProps;
+          console.log(r);
+          
+            modalBody.innerHTML = `
+            <div>🏃 ${e.extendedProps.nickname}</div>
+            <div>👤 ${e.extendedProps.raceName}</div>
+
+            <hr>
+            <div><b>📋 ระยะ</b></div>
+            <div>${e.extendedProps.distance || "-"}</div>
+            <div><b>📋 เป้าหมาย</b></div>
+            <div>${e.extendedProps.note || "-"}</div>
           `;
         }
 
