@@ -241,7 +241,7 @@ const db = getFirestore(app);
 let currentUser=null;
 
 onAuthStateChanged(auth,u=>{
-  if(!u) location.href="login.html";
+  if(!u) location.href="index.html";
   currentUser=u;
 });
 
