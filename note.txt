@@ -5,3 +5,162 @@ athlete dashboard (โชว์วันนี้ + progress)
     ทำหน้าของนักกีฬาโดยมีรายละเอียดดังนี้
     1. card แสดงข้อมูลส่วนตัว
     2. ปฏิทินการฝึกซ้อม
+
+
+
+    rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // 📁 user uploads (เช่น รูป)
+    match /uploads/{userId}/{allPaths=**} {
+
+      // อ่าน: เจ้าของ + coach/staff
+      allow read: if request.auth != null &&
+        (
+          request.auth.uid == userId ||
+          isCoach()
+        );
+
+      // เขียน: เฉพาะเจ้าของ
+      allow write: if request.auth != null &&
+        request.auth.uid == userId;
+    }
+
+    // ❌ block ที่เหลือทั้งหมด
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================
+    // 🔐 HELPER
+    // =========================
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return userDoc().data.roles.hasAny([role]);
+    }
+
+    function isCoach() {
+      return hasRole("coach") || hasRole("staff");
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // =========================
+    // 👤 USERS
+    // =========================
+    match /users/{userId} {
+
+      // 🔥 READ
+      allow read: if isLoggedIn() &&
+        (
+          isOwner(userId) ||
+          isCoach()
+        );
+
+      // 🔥 CREATE (สมัครครั้งแรก)
+      allow create: if isLoggedIn() &&
+        isOwner(userId) &&
+        request.resource.data.keys().hasOnly([
+          "athlete_name",
+          "athlete_last_name",
+          "athlete_nick_name",
+          "email",
+          "birthdate",
+          "weight",
+          "height",
+          "roles",
+          "pb",
+          "created_at"
+        ]);
+
+      // 🔥 UPDATE
+      allow update: if isLoggedIn() &&
+        (
+          isOwner(userId) ||
+          isCoach()
+        );
+
+      // 🔥 DELETE
+      allow delete: if isCoach();
+    }
+
+    // =========================
+    // 🏃 RUNS
+    // =========================
+    match /runs/{runId} {
+      // 🔥 READ
+      allow read: if isLoggedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isCoach()
+        );
+
+      // 🔥 CREATE
+			allow create, update: if request.auth != null;
+
+      // 🔥 UPDATE / DELETE
+      allow update, delete: if isLoggedIn() &&
+        (
+          resource.data.userId == request.auth.uid ||
+          isCoach()
+        );
+    }
+
+    // =========================
+    // 📅 PROGRAMS (โค้ชสร้าง)
+    // =========================
+    match /programs/{id} {
+
+      // 🔥 READ
+      allow read: if isLoggedIn() &&
+        (
+          resource.data.athleteId == request.auth.uid ||
+          isCoach()
+        );
+
+      // 🔥 WRITE (coach only)
+      allow create, update, delete: if isCoach();
+    }
+
+    // =========================
+    // 🏁 RACES
+    // =========================
+    match /races/{raceId} {
+
+      // 🔥 READ
+      allow read: if isLoggedIn();
+
+      // 🔥 CREATE (athlete สร้างของตัวเอง)
+      allow create: if isLoggedIn() &&
+        request.resource.data.athleteId == request.auth.uid &&
+        request.resource.data.keys().hasAll([
+          "athleteId",
+          "name",
+          "date"
+        ]);
+
+      // 🔥 UPDATE / DELETE
+      allow update, delete: if isLoggedIn() &&
+        (
+          resource.data.athleteId == request.auth.uid ||
+          isCoach()
+        );
+    }
+  }
+}
