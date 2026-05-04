@@ -18,7 +18,7 @@ body {
 }
 
 .container {
-  max-width:1000px;
+  max-width:100%;
   margin:auto;
 }
 
@@ -391,7 +391,7 @@ onAuthStateChanged(auth, async(user)=>{
     // 🟢 RUN EVENT
     if (val.type && val.type !== "rest") {
       events.push({
-        title: "🏃 " + val.type,
+        title: "🏃 " + val.type + " [" + val.detail + val.note + "]",
         start: dateStr,
         classNames: [val.type],
 
@@ -399,6 +399,7 @@ onAuthStateChanged(auth, async(user)=>{
           category: "run",
           type: val.type,
           detail: val.detail,
+          dist : val.dist,
           note: val.note
         }
       });
@@ -432,6 +433,69 @@ onAuthStateChanged(auth, async(user)=>{
     });
 
   });
+
+  //Runs Activities snap
+    const q_run_activities = query(
+      collection(db,"runs"),
+      where("userId","==",user.uid)
+    );
+    //snap docs
+    const snap_run_activities = await getDocs(q_run_activities);
+    snap_run_activities.forEach(doc => {
+      const data = doc.data();
+      console.log(doc.id, data);
+      // normalize date ให้ตรง format กัน
+      const runDate = new Date(data.date).toISOString().split("T")[0];
+      // หา event ของวันนั้น (เฉพาะ category run)
+      const found = events.find(ev =>
+        ev.start === runDate &&
+        ev.extendedProps?.category === "run"
+      );
+
+    if (found) {
+      const dist = Number(found.extendedProps.dist) || 0;     // ระยะตามแผน
+      const real_dist = Number(data.distance) || 0;           // ระยะที่วิ่งจริง
+
+      // กัน title ซ้ำ prefix
+      found.title = found.title.replace(/^[✅❌]\s*/, "");
+      const percent = Math.round((real_dist / dist) * 100);
+      if (dist > 0 && real_dist < dist) {
+        // ❌ วิ่งไม่ถึง
+        
+
+        found.title = `❌ ${percent}% ` + found.title;
+
+        found.extendedProps.completed = false;
+        found.extendedProps.percent = percent;
+        // เปลี่ยนสี
+        found.classNames = [...(found.classNames || []), "failed"];
+
+      } else {
+        // ✅ วิ่งถึง/เกิน
+        found.title = "✅ " + found.title;
+
+        found.extendedProps.completed = true;
+        found.extendedProps.percent = 100;
+
+        found.classNames = [...(found.classNames || []), "completed"];
+      }
+
+      // เก็บค่าจริงไว้แสดงตอนกดดู
+      found.extendedProps.real_distance = real_dist;
+    }
+
+            // ✅ mark completed
+      found.extendedProps.completed = true;
+
+      // ✅ merge ข้อมูล run activity เข้าไป
+      
+      
+      found.extendedProps.distance = data.distance;
+      found.extendedProps.effort = data.effort;
+      found.extendedProps.pace = data.avg_pace;
+      found.extendedProps.runs_note = data.note; // กันชนกับ note เดิม
+      
+    });
 
 
  //race snap
@@ -477,6 +541,17 @@ onAuthStateChanged(auth, async(user)=>{
             <p>รายละเอียด: ${e.extendedProps.detail || "-"}</p>
             <p>หมายเหตุ: ${e.extendedProps.note || "-"}</p>
 
+            
+
+            <p><b>🏁 ผลการวิ่ง</b></p>
+            <p>ระยะทาง: ${e.extendedProps.distance || "-"}</p>
+            <p>ความหนัก (effort): ${e.extendedProps.effort || "-"}</p>
+            <p>หมายเหตุ: ${e.extendedProps.runs_note || "-"}</p>
+
+            ${e.extendedProps.percent 
+              ? `<p>ความสำเร็จ: ${e.extendedProps.percent}%</p>` 
+              : ""
+            }
             <button onclick="goSubmit('${e.startStr}')">ส่งผลวิ่ง</button>
           `;
         }
@@ -504,6 +579,27 @@ onAuthStateChanged(auth, async(user)=>{
         document.getElementById("modalTitle").innerText = "📅 " + e.startStr;
         document.getElementById("modalBody").innerHTML = content;
         document.getElementById("modal").style.display = "flex";
+      },eventContent: function(arg) {
+        console.log(arg.event.extendedProps);
+        const percent = arg.event.extendedProps.percent;
+        const title = arg.event.title;
+
+        let percentHtml = "";
+
+        if (percent === undefined) {
+          percentHtml = ``;
+        }else{
+          percentHtml = `<div style="font-size:12px; font-weight:bold;">${percent}%</div>`;
+        }
+
+        return {
+          html: `
+            <div>
+              <div>${title}</div>
+              ${percentHtml}
+            </div>
+          `
+        };
       }
     });
 
