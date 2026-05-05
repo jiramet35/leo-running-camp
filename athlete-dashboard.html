@@ -443,7 +443,6 @@ onAuthStateChanged(auth, async(user)=>{
     const snap_run_activities = await getDocs(q_run_activities);
     snap_run_activities.forEach(doc => {
       const data = doc.data();
-      console.log(doc.id, data);
       // normalize date ให้ตรง format กัน
       const runDate = new Date(data.date).toISOString().split("T")[0];
       // หา event ของวันนั้น (เฉพาะ category run)
@@ -455,7 +454,8 @@ onAuthStateChanged(auth, async(user)=>{
     if (found) {
       const dist = Number(found.extendedProps.dist) || 0;     // ระยะตามแผน
       const real_dist = Number(data.distance) || 0;           // ระยะที่วิ่งจริง
-
+      console.log(data.imgLink);
+      
       // กัน title ซ้ำ prefix
       found.title = found.title.replace(/^[✅❌]\s*/, "");
       const percent = Math.round((real_dist / dist) * 100);
@@ -476,7 +476,7 @@ onAuthStateChanged(auth, async(user)=>{
 
         found.extendedProps.completed = true;
         found.extendedProps.percent = 100;
-
+        found.extendedProps.imgLink = data.imgLink;
         found.classNames = [...(found.classNames || []), "completed"];
       }
 
@@ -531,7 +531,8 @@ onAuthStateChanged(auth, async(user)=>{
       eventClick: function(info) {
         const e = info.event;
         const cat = e.extendedProps.category;
-
+        console.log(e.extendedProps);
+        
         let content = "";
 
         if (cat === "run") {
@@ -550,6 +551,12 @@ onAuthStateChanged(auth, async(user)=>{
 
             ${e.extendedProps.percent 
               ? `<p>ความสำเร็จ: ${e.extendedProps.percent}%</p>` 
+              : ""
+            }
+
+            
+            ${e.extendedProps.imgLink 
+              ? `<a href='${e.extendedProps.imgLink}' target='_blank'>🖼️ : รูปผลการวิ่ง </a>` 
               : ""
             }
             <button onclick="goSubmit('${e.startStr}')">ส่งผลวิ่ง</button>
@@ -580,7 +587,7 @@ onAuthStateChanged(auth, async(user)=>{
         document.getElementById("modalBody").innerHTML = content;
         document.getElementById("modal").style.display = "flex";
       },eventContent: function(arg) {
-        console.log(arg.event.extendedProps);
+        //console.log(arg.event.extendedProps);
         const percent = arg.event.extendedProps.percent;
         const title = arg.event.title;
 

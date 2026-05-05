@@ -2,63 +2,107 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Upload รูปภาพ</title>
+  <title>Upload Cloudinary</title>
 </head>
 <body>
 
-  <h2>อัปโหลดรูปภาพ</h2>
+<h2>อัปโหลดรูป</h2>
 
-  <form id="uploadForm">
-    <input type="file" id="imageInput" accept="image/*">
-    <br><br>
-    <img id="preview" width="200" style="display:none;">
-    <br><br>
-    <button type="submit">อัปโหลด</button>
-  </form>
+<input type="file" id="fileInput" accept="image/*">
+<br><br>
+<img id="preview" width="200" style="display:none;">
+<br><br>
+<button onclick="upload()">Upload</button>
 
-  <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-        /*import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth,signOut,signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import {getStorage, getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";*/
-  // 2. 🔥 ใส่ config ตรงนี้
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInAnonymously , onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const CLOUD_NAME = "den5wregs";
+const UPLOAD_PRESET = "leo-running-camp-hw";
 const firebaseConfig = {
-           apiKey: "AIzaSyDPyfVn4tA0g8ObbsJUlN922wQBu4QH4Z4",
-            authDomain: -"reg7wsp.firebaseapp.com",
-            projectId: "reg7-wsp",
-            storageBucket: "reg7-wsp.firebasestorage.app",
-            messagingSenderId: "1066749156612",
-            appId: "1:1066749156612:web:9a4f17b949d4d27f46c451",
-            measurementId: "G-X4RZTECK26"
+  apiKey: "AIzaSyDQ73R5g8CQyC76nKW9rPCCTwHm8ZRJaQw",
+  authDomain: "leo-running-camp.firebaseapp.com",
+  projectId: "leo-running-camp",
+  storageBucket: "leo-running-camp.firebasestorage.app",
+  messagingSenderId: "145488848267",
+  appId: "1:145488848267:web:e8daabea6061c818fb7b8e",
+  measurementId: "G-5FCB6D998V"
 };
 
-  // 3. initialize app
-  const app = initializeApp(firebaseConfig);
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  // 4. เรียกใช้ service หลังจาก init แล้ว
-  const storage = getStorage(app);
+let currentUser=null;
 
-  // 5. เขียน upload
-  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+onAuthStateChanged(auth,u=>{
+  if(!u) location.href="index.html";
+  currentUser=u;
+});
 
-    const file = document.getElementById("imageInput").files[0];
-    if (!file) return alert("เลือกไฟล์ก่อน");
+// preview
+fileInput.onchange = () => {
+  const file = fileInput.files[0];
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+};
 
-    const fileRef = ref(storage, 'images/' + Date.now() + '_' + file.name);
+window.upload = async () => {
+  const user = auth.currentUser;
+  console.log(auth.currentUser);
+  if (!user) return alert("ยังไม่ login");
 
-    try {
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      console.log(url);
-      alert("อัปโหลดสำเร็จ");
-    } catch (err) {
-      console.error(err);
-      alert("อัปโหลดไม่สำเร็จ");
+  const file = fileInput.files[0];
+  if (!file) return alert("เลือกไฟล์ก่อน");
+
+  if (!file.type.startsWith("image/")) {
+    return alert("ต้องเป็นรูปภาพเท่านั้น");
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    return alert("ไฟล์ใหญ่เกิน 2MB");
+  }
+
+  try {
+    // 🔥 upload ไป Cloudinary
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", UPLOAD_PRESET);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error(data);
+      return alert("Upload failed");
     }
-  });
-  </script>
+
+    const imageUrl = data.secure_url;
+
+    // 🔥 save ลง Firestore
+    await addDoc(collection(db, "images"), {
+      userId: user.uid,
+      url: imageUrl,
+      createdAt: serverTimestamp()
+    });
+
+    preview.src = imageUrl;
+
+    alert("อัปโหลดสำเร็จ 🎉");
+
+  } catch (err) {
+    console.error(err);
+    alert("Upload error");
+  }
+}
+</script>
 
 </body>
 </html>

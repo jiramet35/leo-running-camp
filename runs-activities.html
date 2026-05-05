@@ -152,7 +152,7 @@ input[type=range] {
 </div>
 
 <div class="form-group">
-<label>ประเภทการซ้อม</label>
+<label>ประเภทการซ้อม / Type</label>
 <select id="type">
 <option value="easy">Easy</option>
 <option value="interval">Interval</option>
@@ -164,37 +164,43 @@ input[type=range] {
 <div class="form-group checkbox-group">
   <label>
     <input type="checkbox" id="completed">
-    <b style="color: red;">คุณวิ่งจบตามโปรแกรม</b>
+    <b style="color: red;">คุณวิ่งจบตามโปรแกรม / completed the program</b>
   </label>
 </div>
 
 <div class="row">
 <div class="form-group">
-<label>ระยะ (km) *** (ใส่ระยะรวมทั้งหมด)</label>
+<label>ระยะ (km) (ระยะรวมทั้งหมด / all dist.)</label>
 <input id="distance" placeholder="10.50">
 </div>
 
 <div class="form-group">
-<label>เพซเฉลี่ย</label>
+<label>เพซเฉลี่ย / avg. pace</label>
 <input id="avg_pace" placeholder="04:30">
 </div>
 </div>
 
 <div class="form-group effort-box">
-<label>ระดับความเหนื่อย</label>
+<label>ระดับความเหนื่อย / Exertion level</label>
 <div class="effort-value" id="effortValue">5</div>
 <input type="range" id="slider" min="1" max="10" value="5">
 <div class="levels" id="levels"></div>
 </div>
 
+<h2>อัปโหลดรูป / Upload Img</h2>
+<label style="color:indianred;">*** capture รูปจาก application วิ่ง หากมีหลายรูปให้รวมรูปเป็นรูปเดียวก่อน Capture images from the running application; if there are multiple images, merge them into a single image first.</label>
+<input type="file" id="fileInput" accept="image/*">
+<br><br>
+<img id="preview" width="200" style="display:none;">
+
 <div class="form-group">
-<label>Garmin / Strava *** (ใส่หรือไม่ใส่ก็ได้ / Optional )</label>
+<label>Garmin / Strava Link (ใส่หรือไม่ใส่ก็ได้ / Optional )</label>
 <input id="link">
 </div>
 
 <div class="form-group">
 <label>หมายเหตุ / Remark</label>
-<textarea id="note" rows="10" cols="50" placeholder="อธิบายความรู้สึกหรือระบุ avg_pace ใน แต่ละ Laps ของ Interval"></textarea>
+<textarea id="note" rows="10" cols="50" placeholder="อธิบายความรู้สึกหรือระบุ avg_pace ใน แต่ละ Laps ของ Interval / Describe your feelings or record the average pace for each interval lap."></textarea>
 </div>
 
 <button onclick="submitRun()">บันทึก</button>
@@ -210,8 +216,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const params = new URLSearchParams(window.location.search);
   const dateParam = params.get("date");
-
-  console.log("dateParam:", dateParam);
+  const fileInput = document.getElementById("fileInput");
+  const preview = document.getElementById("preview");
+  //console.log("dateParam:", dateParam);
 
   if (dateParam) {
     const dateInput = document.getElementById("date");
@@ -224,6 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
+const CLOUD_NAME = "den5wregs";
+const UPLOAD_PRESET = "leo-running-camp-hw";
 const firebaseConfig = {
   apiKey: "AIzaSyDQ73R5g8CQyC76nKW9rPCCTwHm8ZRJaQw",
   authDomain: "leo-running-camp.firebaseapp.com",
@@ -244,6 +254,13 @@ onAuthStateChanged(auth,u=>{
   if(!u) location.href="index.html";
   currentUser=u;
 });
+
+// preview
+fileInput.onchange = () => {
+  const file = fileInput.files[0];
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+};
 
 // effort
 let effort=5;
@@ -274,7 +291,7 @@ setEffort(5);
 // submit
 window.submitRun = async () => {
   if (!currentUser) return;
-console.log("AUTH UID:", currentUser.uid);
+
   const status = document.getElementById("status");
   const date = document.getElementById("date").value;
   const dist = document.getElementById("distance").value;
@@ -285,6 +302,14 @@ console.log("AUTH UID:", currentUser.uid);
     status.innerText = "กรุณาเลือกวันที่";
     return;
   }
+
+  // images
+  const file = fileInput.files[0];
+  //if (!file) return alert("เลือกไฟล์ก่อน");
+
+  /*if (!file.type.startsWith("image/")) {
+    return alert("ต้องเป็นรูปภาพเท่านั้น");
+  }*/
 
   if (!/^\d+(\.\d{1,2})?$/.test(dist)) {
     //status.innerText = "ระยะไม่ถูกต้อง";
@@ -298,21 +323,27 @@ console.log("AUTH UID:", currentUser.uid);
   }
 
   try {
-    console.log({
-  userId: currentUser.uid,
-  date,
-  type: document.getElementById("type").value,
-  completed: document.getElementById("completed").checked,
-  distance: Number(dist),
-  avg_pace,
-  effort,
-  link: document.getElementById("link").value,
-  note: document.getElementById("note").value,
-  created_at: serverTimestamp()
-});
+    // 🔥 upload ไป Cloudinary
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", UPLOAD_PRESET);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+
+   /* if (!res.ok) {
+      console.error(data);
+      return alert("Upload failed");
+    }*/
+
+    const imageUrl = data.secure_url || null;
+
     // 🔥 สร้าง id กันซ้ำ
     const docId = currentUser.uid + "_" + date;
-    console.log(docId);
+    //console.log(docId);
     
     const ref = doc(db, "runs", docId);
     const existing = await getDoc(ref);
@@ -336,6 +367,7 @@ console.log("AUTH UID:", currentUser.uid);
       effort,
       link: document.getElementById("link").value,
       note: document.getElementById("note").value,
+      imgLink : imageUrl,
       created_at: serverTimestamp() 
     });
 

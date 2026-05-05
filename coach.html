@@ -774,6 +774,7 @@ for(const u of users){
         effort: d.effort,
         note: d.note,
         link: d.link,
+        imgLink : d.imgLink || null,
         type: d.type
       };
 
@@ -867,12 +868,11 @@ for(const u of users){
 
         document.getElementById("modalTitle").innerText =
           "📅 " + e.startStr;
-        console.log(e.extendedProps.type);
         
         if(e.extendedProps.type === "training"){
 
           const r = e.extendedProps.result;
-
+          
           modalBody.innerHTML = `
             <div>🏃 ${e.extendedProps.detail}</div>
             <div>👤 ${e.extendedProps.nickname}</div>
@@ -891,6 +891,12 @@ for(const u of users){
                 <div>⏱ ${r.avg_pace}</div>
                 <div>💪 Effort: ${r.effort}</div>
                 <div>📝 ${r.note}</div>
+                <div>
+                  🖼️ 
+                  ${r.imgLink 
+                    ? `<a href='${r.imgLink}' target='_blank'>รูปผลการวิ่ง</a>` 
+                    : 'ไม่มีรูป'}
+                </div>
                 ${
                   r.link
                   ? `<a href="${r.link}" target="_blank" class="modal-link">🔗 เปิด Garmin</a>`
