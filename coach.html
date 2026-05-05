@@ -437,6 +437,20 @@ hr {
   text-align: right;
   color: #fff;
 }
+
+.athlete-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-pic {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ddd;
+}
 </style>
 </head>
 
@@ -568,6 +582,7 @@ onAuthStateChanged(auth, async (user)=>{
       nickname: data.athlete_nick_name || "-", 
       weight: data.weight || "-",
       height: data.height || "-",
+      athlete_img : data.athlete_img || "https://res.cloudinary.com/den5wregs/image/upload/v1777972398/avatar_6858562_rukcrr.png",
       pb5k: data.pb?.["5k"],
       pb10k: data.pb?.["10k"],
       pb21k: data.pb?.["21k"],
@@ -639,7 +654,6 @@ programSnap.forEach(docSnap=>{
     const dateStr = d.toISOString().split("T")[0];
 
     const u = users.find(x => x.uid === p.athleteId);
-
     events.push({
       title: `${u?.nickname || "-"} [ ${val.type} ${val?.detail} ${val?.note} ]`,
       start: dateStr,
@@ -701,7 +715,6 @@ raceSnap.forEach(doc=>{
 // 🔥 LOOP USERS
 // =========================
 for(const u of users){
-
   const userRuns = runsByUser[u.uid] || [];
   const userRaces = racesByUser[u.uid] || [];
 
@@ -757,7 +770,6 @@ for(const u of users){
       ev.extendedProps?.athleteId === u.uid &&
       ev.extendedProps?.type === "training"
     );
-
     
     if(found){
       const dist = Number(found.extendedProps?.dist || 0);
@@ -788,6 +800,7 @@ for(const u of users){
 
     } else {
 
+
       events.push({
         title: `✔ ${u.nickname}`,
         start: d.date,
@@ -806,11 +819,20 @@ for(const u of users){
   // =========================
   // 🎴 CARD (เหมือนเดิม)
   // =========================
+  
   athleteGrid.innerHTML += `
     <div class="athlete-card" onclick='goProfile("${u.uid}")'>
       
-      <div class="athlete-name">
-        ${u.name} (${u.nickname})
+      <div class="athlete-header">
+        <img 
+          src="${u.athlete_img || ''}" 
+          class="profile-pic"
+          onclick="event.stopPropagation()"
+        />
+
+        <div class="athlete-name">
+          ${u.name} (${u.nickname})
+        </div>
       </div>
 
       <div class="badge week">Week: ${weekKm.toFixed(1)} km</div>
