@@ -35,6 +35,7 @@ body {
   display:flex;
   justify-content:space-between;
   flex-wrap:wrap;
+  color:#3b82f6;
   gap:10px;
 }
 
@@ -242,6 +243,39 @@ body {
     width:100%;
   }
 }
+
+.stats-grid{
+  display:flex;
+  gap:10px;
+  margin:10px 0;
+}
+
+.stats-grid .card{
+  flex:1;
+  background:#fff;
+  border-radius:12px;
+  padding:10px 6px;
+  text-align:center;
+  color :#3b82f6;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+.stats-grid .card div{
+  font-size:11px;
+  color:#666;
+  margin-bottom:2px;
+}
+
+.stats-grid .card h1{
+  margin:0;
+  font-size:20px;
+  line-height:1.1;
+}
+
+.stats-grid .card small{
+  font-size:10px;
+  color:#999;
+}
 </style>
 </head>
 
@@ -257,7 +291,28 @@ body {
   </div>
   <div class="profile" id="profile"></div>
 </div>
+<!-- Run Stat -->
+<div class="stats-grid">
 
+  <div class="card">
+    <div>Total</div>
+    <h1 id="totalMileage">0</h1>
+    <small>KM</small>
+  </div>
+
+  <div class="card">
+    <div>This Month</div>
+    <h1 id="monthMileage">0</h1>
+    <small>KM</small>
+  </div>
+
+  <div class="card">
+    <div>This Week</div>
+    <h1 id="weekMileage">0</h1>
+    <small>KM</small>
+  </div>
+
+</div>
 <!-- 📅 CALENDAR -->
 <div class="card">
   <h3>📅 ปฏิทินการฝึกซ้อม</h3>
@@ -443,6 +498,8 @@ onAuthStateChanged(auth, async(user)=>{
     const snap_run_activities = await getDocs(q_run_activities);
     snap_run_activities.forEach(doc => {
       const data = doc.data();
+      const runId = doc.id;
+      console.log(runId);
       // normalize date ให้ตรง format กัน
       const runDate = new Date(data.date).toISOString().split("T")[0];
       // หา event ของวันนั้น (เฉพาะ category run)
@@ -454,7 +511,6 @@ onAuthStateChanged(auth, async(user)=>{
     if (found) {
       const dist = Number(found.extendedProps.dist) || 0;     // ระยะตามแผน
       const real_dist = Number(data.distance) || 0;           // ระยะที่วิ่งจริง
-      console.log(data.imgLink);
       
       // กัน title ซ้ำ prefix
       found.title = found.title.replace(/^[✅❌]\s*/, "");
@@ -473,7 +529,6 @@ onAuthStateChanged(auth, async(user)=>{
       } else {
         // ✅ วิ่งถึง/เกิน
         found.title = "✅ " + found.title;
-
         found.extendedProps.completed = true;
         found.extendedProps.percent = 100;
         found.extendedProps.imgLink = data.imgLink;
@@ -482,6 +537,9 @@ onAuthStateChanged(auth, async(user)=>{
 
       // เก็บค่าจริงไว้แสดงตอนกดดู
       found.extendedProps.real_distance = real_dist;
+
+      //Doc id
+      found.extendedProps.docId = runId; 
     }
 
             // ✅ mark completed
@@ -519,7 +577,47 @@ onAuthStateChanged(auth, async(user)=>{
       });
     });
 
-  
+  //=================
+  // Run Mileage
+  //=================
+  const q_mileage = query(
+    collection(db, "runs"),
+    where("userId", "==", currentUser.uid)
+  );
+
+  const snapMileage = await getDocs(q_mileage);
+  let totalKm = 0;
+  let monthKm = 0;
+  let weekKm = 0;
+
+  const now = new Date();
+  const today = new Date();
+
+  const firstDay = new Date(today);
+  firstDay.setDate(today.getDate() - today.getDay());
+
+  snapMileage.forEach(doc => {
+      const d = doc.data();
+      if(!d.date) return;
+
+      const runDate = new Date(d.date);
+
+      totalKm += Number(d.distance || 0);
+      if(
+        runDate.getMonth() === now.getMonth() &&
+        runDate.getFullYear() === now.getFullYear()
+      ){
+        monthKm += Number(d.distance || 0);
+      }
+
+      if(runDate >= firstDay){
+        weekKm += Number(d.distance || 0);
+      }
+  });
+
+  document.getElementById("totalMileage").innerText = totalKm.toFixed(1);
+  document.getElementById("monthMileage").innerText = monthKm.toFixed(1);
+  document.getElementById("weekMileage").innerText = weekKm.toFixed(1);
 
   const calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
       initialView: "dayGridMonth",
@@ -559,6 +657,18 @@ onAuthStateChanged(auth, async(user)=>{
               ? `<a href='${e.extendedProps.imgLink}' target='_blank'>🖼️ : รูปผลการวิ่ง </a>` 
               : ""
             }
+            
+            ${
+              e.extendedProps.docId
+              ? `
+              <button class="edit-btn"
+                onclick="editRun('${e.extendedProps.docId}')">
+                ✏️ แก้ไขผลวิ่ง
+              </button>
+              `
+              : ""
+            }
+
             <button onclick="goSubmit('${e.startStr}')">ส่งผลวิ่ง</button>
           `;
         }
@@ -571,7 +681,9 @@ onAuthStateChanged(auth, async(user)=>{
         }
 
         if (cat === "rest") {
-          content = `<p>😴 วันพัก</p>`;
+          content = `<p>😴 วันพัก</p>
+                    <button onclick="goSubmit('${e.startStr}')">ส่งผลวิ่ง</button>
+                    `;
         }
 
         if (cat === "race") {
@@ -677,6 +789,12 @@ window.saveRace = async function(){
   } catch(e){
     alert(e.message);
   }
+};
+
+//Edit Run
+window.editRun = function(id){
+  window.location.href =
+    "runs-activities.html?edit=" + id;
 };
 
 //Sign-out

@@ -138,6 +138,41 @@ input[type=range] {
   width: 16px;
   height: 16px;
 }
+
+.loading-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+  backdrop-filter: blur(3px);
+}
+
+.spinner{
+  width:60px;
+  height:60px;
+  border:6px solid #ffffff55;
+  border-top:6px solid #fff;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+
+.loading-text{
+  margin-top:15px;
+  color:white;
+  font-size:18px;
+  font-weight:bold;
+}
+
+@keyframes spin{
+  100%{
+    transform:rotate(360deg);
+  }
+}
+
 </style>
 </head>
 
@@ -208,10 +243,15 @@ input[type=range] {
 
 </div>
 
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+  <div class="spinner"></div>
+  <div class="loading-text">กำลังส่งผลวิ่ง...</div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore,addDoc,collection ,getDoc , doc, setDoc , serverTimestamp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore,addDoc,collection ,getDoc , updateDoc , doc, setDoc , serverTimestamp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 document.addEventListener("DOMContentLoaded", () => {
 
   const params = new URLSearchParams(window.location.search);
@@ -249,10 +289,51 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser=null;
+const params = new URLSearchParams(location.search);
+const editId = params.get("edit");
+let imgLinkEdit = "";
+let editRef = null;
 
-onAuthStateChanged(auth,u=>{
+onAuthStateChanged(auth,async u=>{
   if(!u) location.href="index.html";
   currentUser=u;
+  if(editId){
+
+  editRef = doc(db, "runs", editId);
+
+  const snap = await getDoc(editRef);
+
+  if(snap.exists()){
+
+    const d = snap.data();
+
+    document.getElementById("date").value = d.date || "";
+    document.getElementById("distance").value = d.distance || "";
+    document.getElementById("avg_pace").value = d.avg_pace || "";
+    document.getElementById("type").value = d.type || "easy";
+    document.getElementById("completed").checked = d.completed || false;
+    document.getElementById("note").value = d.note || "";
+    if (d.imgLink) {
+      const img = document.getElementById("preview");
+      img.src = d.imgLink;
+      img.style.display = "block";
+      imgLinkEdit = d.imgLink; //  append form data for edit
+    }
+
+    setEffort(d.effort || 5);
+  }
+
+      document.getElementById("fileInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+
+      if (file) {
+        const img = document.getElementById("preview");
+
+        img.src = URL.createObjectURL(file);
+        img.style.display = "block";
+      }
+    });
+}
 });
 
 // preview
@@ -291,7 +372,7 @@ setEffort(5);
 // submit
 window.submitRun = async () => {
   if (!currentUser) return;
-
+  
   const status = document.getElementById("status");
   const date = document.getElementById("date").value;
   const dist = document.getElementById("distance").value;
@@ -305,6 +386,7 @@ window.submitRun = async () => {
 
   // images
   const file = fileInput.files[0];
+  let finalImgLink = imgLinkEdit;
   //if (!file) return alert("เลือกไฟล์ก่อน");
 
   /*if (!file.type.startsWith("image/")) {
@@ -327,31 +409,39 @@ window.submitRun = async () => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", UPLOAD_PRESET);
-
+    showLoading();
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
       method: "POST",
       body: formData
     });
     const data = await res.json();
 
-   /* if (!res.ok) {
+    /* if (!res.ok) {
       console.error(data);
       return alert("Upload failed");
     }*/
 
     const imageUrl = data.secure_url || null;
-
+    if(file){
+      // upload ใหม่
+      finalImgLink = imageUrl;
+    }
     // 🔥 สร้าง id กันซ้ำ
     const docId = currentUser.uid + "_" + date;
     //console.log(docId);
     
     const ref = doc(db, "runs", docId);
     const existing = await getDoc(ref);
-
-    if (existing.exists()) {
-      //status.innerText = "⚠️ วันนี้คุณส่งแล้ว";
-      alert("⚠️ วันนี้ ("+date+") คุณส่งผลวิ่งแล้ว");
-      return;
+    if (!editId) {
+      const existing = await getDoc(ref);
+      
+      if (existing.exists()) {
+        alert(`⚠️ วันที่ ${safeDate} คุณส่งผลวิ่งแล้ว`);
+        return;
+      }
+    }else if(editId){
+      
+        const imageUrl = finalImgLink || null;
     }
 
     
@@ -367,7 +457,7 @@ window.submitRun = async () => {
       effort,
       link: document.getElementById("link").value,
       note: document.getElementById("note").value,
-      imgLink : imageUrl,
+      imgLink : finalImgLink,
       created_at: serverTimestamp() 
     });
 
@@ -379,8 +469,19 @@ window.submitRun = async () => {
   } catch (e) {
     console.error(e);
     status.innerText = e.message;
+  }finally{
+    hideLoading();
   }
 };
+
+
+function showLoading() {
+  document.getElementById("loadingOverlay").style.display = "flex";
+}
+
+function hideLoading() {
+  document.getElementById("loadingOverlay").style.display = "none";
+}
 </script>
 
 </body>
