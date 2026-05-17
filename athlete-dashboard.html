@@ -499,7 +499,6 @@ onAuthStateChanged(auth, async(user)=>{
     snap_run_activities.forEach(doc => {
       const data = doc.data();
       const runId = doc.id;
-      console.log(runId);
       // normalize date ให้ตรง format กัน
       const runDate = new Date(data.date).toISOString().split("T")[0];
       // หา event ของวันนั้น (เฉพาะ category run)
@@ -508,6 +507,7 @@ onAuthStateChanged(auth, async(user)=>{
         ev.extendedProps?.category === "run"
       );
 
+    if (!found) return; 
     if (found) {
       const dist = Number(found.extendedProps.dist) || 0;     // ระยะตามแผน
       const real_dist = Number(data.distance) || 0;           // ระยะที่วิ่งจริง
@@ -548,10 +548,10 @@ onAuthStateChanged(auth, async(user)=>{
       // ✅ merge ข้อมูล run activity เข้าไป
       
       
-      found.extendedProps.distance = data.distance;
-      found.extendedProps.effort = data.effort;
-      found.extendedProps.pace = data.avg_pace;
-      found.extendedProps.runs_note = data.note; // กันชนกับ note เดิม
+      found.extendedProps.distance = data.distance || '';
+      found.extendedProps.effort = data.effort || '';
+      found.extendedProps.pace = data.avg_pace || '';
+      found.extendedProps.runs_note = data.note || ''; // กันชนกับ note เดิม
       
     });
 
